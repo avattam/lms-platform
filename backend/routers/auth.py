@@ -17,10 +17,18 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
 def _get_google_sso() -> GoogleSSO:
+    frontend_url = settings.FRONTEND_URL.rstrip("/")
+    if "localhost" in frontend_url and ":" not in frontend_url:
+        redirect_uri = f"{frontend_url}/api/auth/google/callback"
+    elif "localhost:5173" in frontend_url:
+        redirect_uri = "http://localhost:8000/api/auth/google/callback"
+    else:
+        redirect_uri = f"{frontend_url}/api/auth/google/callback"
+    print("redirect_uri", redirect_uri)
     return GoogleSSO(
         client_id=settings.GOOGLE_CLIENT_ID,
         client_secret=settings.GOOGLE_CLIENT_SECRET,
-        redirect_uri=f"{settings.FRONTEND_URL}/auth/google/callback",
+        redirect_uri=redirect_uri,
         allow_insecure_http=True,
     )
 

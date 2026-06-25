@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
 from core.security import require_admin
-from models.db_models import Course, CourseVideo, CourseViewLog, LearningPath, User
+from models.db_models import Course, CourseVideo, CourseViewLog, LearningPath, User, UserEnrollment
 from schemas.pydantic_schemas import (
     CourseIn,
     CourseOut,
@@ -16,6 +16,7 @@ from schemas.pydantic_schemas import (
     LearningPathIn,
     LearningPathOut,
     MessageResponse,
+    UserListOut,
     VideoIn,
     VideoOut,
     VideoUpdate,
@@ -272,3 +273,46 @@ async def get_user_view_logs(
         .limit(limit)
     )
     return result.scalars().all()
+
+
+@router.get("/courses/{course_id}/videos", response_model=list[VideoOut])
+async def list_course_videos_admin(
+    course_id: uuid.UUID,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _admin: Annotated[User, Depends(require_admin)],
+):
+    # Validate course exists
+    result = await db.execute(select(Course).where(Course.id == course_id))
+    if not result.scalar_one_or_none():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
+
+    res = await db.execute(
+        select(CourseVideo)
+        .where(CourseVideo.course_id == course_id)
+        .order_by(CourseVideo.sequence_order)
+    )
+    return res.scalars().all()
+
+
+@router.get("/courses/{course_id}/enrollments", response_model=list[UserListOut])
+async def list_course_enrollments(
+    course_id: uuid.UUID,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _admin: Annotated[User, Depends(require_admin)],
+):
+    # Validate course exists
+    result = await db.execute(select(Course).where(Course.id == course_id))
+    if not result.scalar_one_or_none():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
+
+    stmt = (
+        select(User)
+        .join(UserEnrollment, UserEnrollment.user_id == User.id)
+        .where(
+            UserEnrollment.course_id == course_id,
+            UserEnrollment.removed_at.is_(None)
+        )
+    )
+    res = await db.execute(stmt)
+    return res.scalars().all()
+
