@@ -9,9 +9,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
 from core.security import get_current_user
-from models.db_models import Course, CourseVideo, CourseViewLog, User, UserEnrollment, VideoProgress
+from models.db_models import Course, CourseDocument, CourseVideo, CourseViewLog, User, UserEnrollment, VideoProgress
 from schemas.pydantic_schemas import (
     CourseOut,
+    CourseDocumentOut,
     MessageResponse,
     SessionEndIn,
     SessionStartOut,
@@ -88,6 +89,26 @@ async def list_course_videos(
         .order_by(CourseVideo.sequence_order)
     )
     return result.scalars().all()
+
+
+@router.get("/{course_id}/documents", response_model=list[CourseDocumentOut])
+async def list_student_course_documents(
+    course_id: uuid.UUID,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    await _assert_enrolled(current_user.id, course_id, db)
+    result = await db.execute(select(Course).where(Course.id == course_id, Course.is_published == True))
+    course = result.scalar_one_or_none()
+    if not course:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found.")
+
+    res = await db.execute(
+        select(CourseDocument)
+        .where(CourseDocument.course_id == course_id)
+        .order_by(CourseDocument.uploaded_at.desc())
+    )
+    return res.scalars().all()
 
 
 # ===========================================================================

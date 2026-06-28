@@ -1,18 +1,19 @@
-"""Admin: Course, video, and learning path management."""
+import os
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
 from core.security import require_admin
-from models.db_models import Course, CourseVideo, CourseViewLog, LearningPath, User, UserEnrollment
+from models.db_models import Course, CourseDocument, CourseVideo, CourseViewLog, LearningPath, User, UserEnrollment
 from schemas.pydantic_schemas import (
     CourseIn,
     CourseOut,
     CourseUpdate,
+    CourseDocumentOut,
     LearningPathIn,
     LearningPathOut,
     MessageResponse,
@@ -315,4 +316,97 @@ async def list_course_enrollments(
     )
     res = await db.execute(stmt)
     return res.scalars().all()
+
+
+# ===========================================================================
+# Course Documents
+# ===========================================================================
+
+@router.post("/courses/{course_id}/documents", response_model=list[CourseDocumentOut], status_code=status.HTTP_201_CREATED)
+async def upload_course_documents(
+    course_id: uuid.UUID,
+    files: list[UploadFile] = File(...),
+    db: AsyncSession = Depends(get_db),
+    _admin: User = Depends(require_admin),
+):
+    import shutil
+    # Validate course exists
+    result = await db.execute(select(Course).where(Course.id == course_id))
+    if not result.scalar_one_or_none():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
+
+    docs = []
+    os.makedirs("uploads", exist_ok=True)
+    
+    for file in files:
+        # Generate a unique filename using UUID to prevent collisions
+        file_ext = os.path.splitext(file.filename)[1]
+        unique_filename = f"{uuid.uuid4()}{file_ext}"
+        file_path = os.path.join("uploads", unique_filename)
+        
+        # Save file to local uploads directory
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+            
+        file_size = os.path.getsize(file_path)
+        
+        # Save document meta to database
+        # Make the file URL point to our static route
+        file_url = f"/static/uploads/{unique_filename}"
+        
+        doc = CourseDocument(
+            course_id=course_id,
+            filename=file.filename or "unknown",
+            file_url=file_url,
+            file_size=file_size,
+        )
+        db.add(doc)
+        docs.append(doc)
+        
+    await db.commit()
+    for doc in docs:
+        await db.refresh(doc)
+        
+    return docs
+
+
+@router.get("/courses/{course_id}/documents", response_model=list[CourseDocumentOut])
+async def list_course_documents(
+    course_id: uuid.UUID,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _admin: Annotated[User, Depends(require_admin)],
+):
+    # Validate course exists
+    result = await db.execute(select(Course).where(Course.id == course_id))
+    if not result.scalar_one_or_none():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
+
+    res = await db.execute(
+        select(CourseDocument)
+        .where(CourseDocument.course_id == course_id)
+        .order_by(CourseDocument.uploaded_at.desc())
+    )
+    return res.scalars().all()
+
+
+@router.delete("/courses/documents/{document_id}", response_model=MessageResponse)
+async def delete_course_document(
+    document_id: uuid.UUID,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _admin: Annotated[User, Depends(require_admin)],
+):
+    result = await db.execute(select(CourseDocument).where(CourseDocument.id == document_id))
+    doc = result.scalar_one_or_none()
+    if not doc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
+
+    # Remove file from local disk if it exists
+    filename = os.path.basename(doc.file_url)
+    file_path = os.path.join("uploads", filename)
+    if os.path.exists(file_path):
+        os.remove(file_path)
+
+    await db.delete(doc)
+    await db.commit()
+    return {"message": "Document deleted successfully."}
 

@@ -165,6 +165,21 @@ class VideoOut(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Course Documents
+# ---------------------------------------------------------------------------
+class CourseDocumentOut(BaseModel):
+    id: uuid.UUID
+    course_id: uuid.UUID
+    filename: str
+    file_url: str
+    file_size: int
+    uploaded_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+
+# ---------------------------------------------------------------------------
 # Video Progress
 # ---------------------------------------------------------------------------
 class VideoProgressIn(BaseModel):

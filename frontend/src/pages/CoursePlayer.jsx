@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import api from '../api/client';
 
 const HEARTBEAT_MS = 10_000;
@@ -7,6 +7,8 @@ const HEARTBEAT_MS = 10_000;
 export default function CoursePlayer({ user }) {
   const { courseId } = useParams();
   const [videos, setVideos] = useState([]);
+  const [documents, setDocuments] = useState([]);
+  const [tab, setTab] = useState('videos'); // 'videos' | 'documents'
   const [current, setCurrent] = useState(null);
   const [sessionId, setSessionId] = useState(null);
   const videoRef = useRef(null);
@@ -18,6 +20,13 @@ export default function CoursePlayer({ user }) {
       setVideos(r.data);
       if (r.data.length > 0) loadVideo(r.data[0]);
     });
+  }, [courseId]);
+
+  // Load documents for the course
+  useEffect(() => {
+    api.get(`/courses/${courseId}/documents`)
+      .then(r => setDocuments(r.data))
+      .catch(() => {});
   }, [courseId]);
 
   async function loadVideo(video) {
@@ -81,39 +90,102 @@ export default function CoursePlayer({ user }) {
 
   return (
     <div className="player-layout">
-      {/* Sidebar: video list */}
+      {/* Sidebar */}
       <aside className="video-sidebar">
-        <h3>Course Videos</h3>
-        {videos.map((v, i) => (
-          <button
-            key={v.id}
-            className={`video-item ${current?.id === v.id ? 'active' : ''}`}
-            onClick={() => loadVideo(v)}
-          >
-            <span className="video-num">{i + 1}</span>
-            <span className="video-title">{v.title}</span>
-          </button>
-        ))}
-      </aside>
+        <Link to="/dashboard" className="btn-ghost" style={{ display: 'block', marginBottom: '1.25rem', textAlign: 'center', fontSize: '0.85rem' }}>
+          ← Back to Dashboard
+        </Link>
 
-      {/* Main: video player */}
-      <main className="player-main">
-        {current ? (
+        {/* Tab Selector */}
+        <div className="tab-bar" style={{ marginBottom: '1.25rem' }}>
+          <button className={`tab ${tab === 'videos' ? 'active' : ''}`} onClick={() => setTab('videos')} style={{ flex: 1, padding: '0.4rem 0.5rem', fontSize: '0.8rem' }}>
+            🎥 Videos
+          </button>
+          <button className={`tab ${tab === 'documents' ? 'active' : ''}`} onClick={() => setTab('documents')} style={{ flex: 1, padding: '0.4rem 0.5rem', fontSize: '0.8rem' }}>
+            📄 Docs
+          </button>
+        </div>
+
+        {tab === 'videos' ? (
           <>
-            <h2>{current.title}</h2>
-            <video
-              ref={videoRef}
-              src={current.video_url}
-              controls
-              className="video-player"
-              onEnded={() => saveProgress(true)}
-            />
-            {current.description && <p className="video-desc">{current.description}</p>}
+            <h3>Course Videos</h3>
+            {videos.map((v, i) => (
+              <button
+                key={v.id}
+                className={`video-item ${current?.id === v.id ? 'active' : ''}`}
+                onClick={() => loadVideo(v)}
+              >
+                <span className="video-num">{i + 1}</span>
+                <span className="video-title">{v.title}</span>
+              </button>
+            ))}
           </>
         ) : (
-          <div className="empty-state">Select a video to begin.</div>
+          <>
+            <h3>Documents List</h3>
+            <p className="empty-text" style={{ padding: '0.5rem 0.25rem', fontSize: '0.8rem' }}>
+              Select a document in the main area to view or download.
+            </p>
+          </>
+        )}
+      </aside>
+
+      {/* Main Content Area */}
+      <main className="player-main">
+        {tab === 'videos' ? (
+          current ? (
+            <>
+              <h2>{current.title}</h2>
+              <video
+                ref={videoRef}
+                src={current.video_url}
+                controls
+                className="video-player"
+                onEnded={() => saveProgress(true)}
+              />
+              {current.description && <p className="video-desc">{current.description}</p>}
+            </>
+          ) : (
+            <div className="empty-state">Select a video to begin.</div>
+          )
+        ) : (
+          <div>
+            <h2 style={{ marginBottom: '1.5rem' }}>Course Reference Documents</h2>
+            
+            {documents.length === 0 ? (
+              <div className="empty-state">No reference documents uploaded for this course yet.</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {documents.map((doc) => (
+                  <div key={doc.id} className="video-row" style={{ display: 'flex', alignItems: 'center', background: 'var(--bg-3)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                    <span style={{ fontSize: '1.75rem', marginRight: '1rem' }}>📄</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <h4 style={{ color: 'var(--text)', fontSize: '0.95rem', fontWeight: '500', marginBottom: '0.2rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {doc.filename}
+                      </h4>
+                      <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                        {(doc.file_size / 1024).toFixed(1)} KB • Uploaded on {new Date(doc.uploaded_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div>
+                      <a 
+                        href={`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}${doc.file_url}`} 
+                        target="_blank" 
+                        rel="noreferrer" 
+                        className="btn-primary" 
+                        style={{ display: 'inline-flex', alignItems: 'center', padding: '0.5rem 1.2rem', textDecoration: 'none', fontSize: '0.85rem' }}
+                      >
+                        Download Document
+                      </a>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         )}
       </main>
     </div>
   );
 }
+

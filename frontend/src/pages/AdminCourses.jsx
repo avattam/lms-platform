@@ -25,6 +25,9 @@ export default function AdminCourses() {
   const [enrollUserId, setEnrollUserId] = useState('');
   const [enrollmentsLoading, setEnrollmentsLoading] = useState(false);
 
+  // Documents state
+  const [documents, setDocuments] = useState([]);
+
   useEffect(() => { fetchData(); }, []);
 
   async function fetchData() {
@@ -53,8 +56,12 @@ export default function AdminCourses() {
     setSelectedCourse(course);
     setIsEditingCourse(false);
     setDetailTab('videos');
-    const { data } = await api.get(`/admin/courses/${course.id}/videos`).catch(() => ({ data: [] }));
-    setVideos(data);
+    const [v, d] = await Promise.all([
+      api.get(`/admin/courses/${course.id}/videos`).catch(() => ({ data: [] })),
+      api.get(`/admin/courses/${course.id}/documents`).catch(() => ({ data: [] }))
+    ]);
+    setVideos(v.data);
+    setDocuments(d.data);
     fetchEnrollments(course.id);
   }
 
@@ -147,6 +154,36 @@ export default function AdminCourses() {
   async function deleteVideo(videoId) {
     await api.delete(`/admin/videos/${videoId}`);
     setVideos(prev => prev.filter(v => v.id !== videoId));
+  }
+
+  async function uploadDocuments(e) {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+    
+    const formData = new FormData();
+    files.forEach(file => {
+      formData.append('files', file);
+    });
+    
+    try {
+      const { data } = await api.post(`/admin/courses/${selectedCourse.id}/documents`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setDocuments(prev => [...data, ...prev]);
+    } catch (err) {
+      alert(err.response?.data?.detail || 'Failed to upload documents.');
+    }
+    e.target.value = null;
+  }
+
+  async function deleteDocument(docId) {
+    if (!confirm('Are you sure you want to delete this document?')) return;
+    try {
+      await api.delete(`/admin/courses/documents/${docId}`);
+      setDocuments(prev => prev.filter(d => d.id !== docId));
+    } catch (err) {
+      alert(err.response?.data?.detail || 'Failed to delete document.');
+    }
   }
 
   async function loadLogs() {
@@ -282,6 +319,9 @@ export default function AdminCourses() {
                 <button className={`tab ${detailTab === 'videos' ? 'active' : ''}`} onClick={() => setDetailTab('videos')}>
                   🎥 Videos ({videos.length})
                 </button>
+                <button className={`tab ${detailTab === 'documents' ? 'active' : ''}`} onClick={() => setDetailTab('documents')}>
+                  📄 Documents ({documents.length})
+                </button>
                 <button className={`tab ${detailTab === 'enrollments' ? 'active' : ''}`} onClick={() => setDetailTab('enrollments')}>
                   👥 Enrollments ({enrollments.length})
                 </button>
@@ -319,6 +359,56 @@ export default function AdminCourses() {
                               {v.is_published ? 'Unpublish' : 'Publish'}
                             </button>
                             <button className="btn-sm btn-danger" onClick={() => deleteVideo(v.id)}>Delete</button>
+                          </div>
+                        </div>
+                      ))
+                  }
+                </div>
+              )}
+
+              {/* Documents Sub-tab */}
+              {detailTab === 'documents' && (
+                <div>
+                  <div className="create-form">
+                    <h4>Upload Documents</h4>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
+                      Select one or more files to upload for this course.
+                    </p>
+                    <input 
+                      type="file" 
+                      multiple 
+                      className="form-input" 
+                      onChange={uploadDocuments} 
+                      style={{ padding: '0.4rem 0.6rem', fontSize: '0.85rem' }} 
+                    />
+                  </div>
+
+                  {documents.length === 0
+                    ? <p className="empty-text">No documents uploaded yet.</p>
+                    : documents.map((doc) => (
+                        <div key={doc.id} className="video-row" style={{ alignItems: 'center' }}>
+                          <span style={{ fontSize: '1.25rem' }}>📄</span>
+                          <div className="video-row-info" style={{ flex: 1, minWidth: 0 }}>
+                            <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>
+                              {doc.filename}
+                            </span>
+                            <span className="video-url-preview">
+                              {(doc.file_size / 1024).toFixed(1)} KB • {new Date(doc.uploaded_at).toLocaleDateString()}
+                            </span>
+                          </div>
+                          <div className="video-row-actions">
+                            <a 
+                              href={`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}${doc.file_url}`} 
+                              target="_blank" 
+                              rel="noreferrer" 
+                              className="btn-sm btn-success" 
+                              style={{ display: 'inline-flex', alignItems: 'center', height: '28px', textDecoration: 'none' }}
+                            >
+                              Download
+                            </a>
+                            <button className="btn-sm btn-danger" onClick={() => deleteDocument(doc.id)}>
+                              Delete
+                            </button>
                           </div>
                         </div>
                       ))

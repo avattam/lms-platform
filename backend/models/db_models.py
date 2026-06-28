@@ -124,6 +124,7 @@ class Course(Base):
     enrollments: Mapped[list["UserEnrollment"]] = relationship("UserEnrollment", back_populates="course")
     progress: Mapped[list["UserProgress"]] = relationship("UserProgress", back_populates="course")
     assessments: Mapped[list["Assessment"]] = relationship("Assessment", back_populates="course")
+    documents: Mapped[list["CourseDocument"]] = relationship("CourseDocument", back_populates="course", cascade="all, delete")
 
 
 # ---------------------------------------------------------------------------
@@ -146,6 +147,22 @@ class CourseVideo(Base):
     course: Mapped["Course"] = relationship("Course", back_populates="videos")
     progress_records: Mapped[list["VideoProgress"]] = relationship("VideoProgress", back_populates="video", cascade="all, delete")
     view_logs: Mapped[list["CourseViewLog"]] = relationship("CourseViewLog", back_populates="video")
+
+
+# ---------------------------------------------------------------------------
+# Course Documents
+# ---------------------------------------------------------------------------
+class CourseDocument(Base):
+    __tablename__ = "course_documents"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    course_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("courses.id", ondelete="CASCADE"), nullable=False)
+    filename: Mapped[str] = mapped_column(String, nullable=False)
+    file_url: Mapped[str] = mapped_column(String, nullable=False)
+    file_size: Mapped[int] = mapped_column(Integer, nullable=False)
+    uploaded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    course: Mapped["Course"] = relationship("Course", back_populates="documents")
 
 
 # ---------------------------------------------------------------------------
