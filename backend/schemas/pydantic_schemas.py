@@ -37,6 +37,23 @@ class UserListOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class UserCreate(BaseModel):
+    email: EmailStr
+    full_name: str | None = None
+    role: str = "student"
+    is_active: bool = True
+    provider: str = "manual"
+    provider_user_id: str | None = None
+
+
+class UserUpdate(BaseModel):
+    email: EmailStr | None = None
+    full_name: str | None = None
+    role: str | None = None
+    is_active: bool | None = None
+
+
+
 # ---------------------------------------------------------------------------
 # Auth
 # ---------------------------------------------------------------------------

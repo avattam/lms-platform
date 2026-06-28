@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../api/client';
 
 export default function AdminUsers() {
@@ -9,6 +10,12 @@ export default function AdminUsers() {
   const [courses, setCourses] = useState([]);
   const [enrollCourseId, setEnrollCourseId] = useState('');
   const [loading, setLoading] = useState(true);
+
+  // Modal and Form states
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState('create'); // 'create' or 'edit'
+  const [formData, setFormData] = useState({ email: '', full_name: '', role: 'student', is_active: true });
+  const [formError, setFormError] = useState('');
 
   useEffect(() => { fetchUsers(); }, []);
 
@@ -49,6 +56,57 @@ export default function AdminUsers() {
     setEnrollments(prev => prev.filter(e => e.course_id !== courseId));
   }
 
+  function openCreateModal() {
+    setFormData({ email: '', full_name: '', role: 'student', is_active: true });
+    setFormError('');
+    setModalMode('create');
+    setModalOpen(true);
+  }
+
+  function openEditModal() {
+    setFormData({
+      email: selected.email,
+      full_name: selected.full_name || '',
+      role: selected.role,
+      is_active: selected.is_active,
+    });
+    setFormError('');
+    setModalMode('edit');
+    setModalOpen(true);
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setFormError('');
+    try {
+      if (modalMode === 'create') {
+        const { data } = await api.post('/admin/users', formData);
+        setUsers(prev => [data, ...prev]);
+        setModalOpen(false);
+      } else {
+        const { data } = await api.patch(`/admin/users/${selected.id}`, formData);
+        setUsers(prev => prev.map(u => u.id === data.id ? data : u));
+        setSelected(data);
+        setModalOpen(false);
+      }
+    } catch (err) {
+      setFormError(err.response?.data?.detail || 'An error occurred. Please try again.');
+    }
+  }
+
+  async function deleteUser() {
+    if (!window.confirm(`Are you sure you want to delete ${selected.full_name || selected.email}? This cannot be undone.`)) {
+      return;
+    }
+    try {
+      await api.delete(`/admin/users/${selected.id}`);
+      setUsers(prev => prev.filter(u => u.id !== selected.id));
+      setSelected(null);
+    } catch (err) {
+      alert(err.response?.data?.detail || 'Failed to delete user.');
+    }
+  }
+
   const enrolledIds = new Set(enrollments.map(e => e.course_id));
   const availableCourses = courses.filter(c => !enrolledIds.has(c.id));
 
@@ -65,7 +123,9 @@ export default function AdminUsers() {
             onKeyDown={e => e.key === 'Enter' && fetchUsers()}
           />
           <button className="btn-primary" onClick={fetchUsers}>Search</button>
+          <button className="btn-primary" onClick={openCreateModal} style={{ background: 'linear-gradient(135deg, var(--accent), #00a887)', boxShadow: '0 2px 12px rgba(0, 212, 170, 0.3)' }}>+ Add User</button>
         </div>
+        <Link to="/dashboard" className="btn-ghost">← Dashboard</Link>
       </div>
 
       <div className="admin-content">
@@ -123,6 +183,11 @@ export default function AdminUsers() {
               <button className="btn-close" onClick={() => setSelected(null)}>✕</button>
             </div>
 
+            <div className="drawer-section" style={{ borderBottom: '1px solid var(--border)', paddingBottom: '1rem', display: 'flex', flexDirection: 'row', gap: '0.5rem' }}>
+              <button className="btn-sm" onClick={openEditModal} style={{ flex: 1 }}>Edit Profile</button>
+              <button className="btn-sm btn-danger" onClick={deleteUser} style={{ flex: 1 }}>Delete User</button>
+            </div>
+
             <div className="drawer-section">
               <h4>Course Enrollments</h4>
               {enrollments.length === 0
@@ -160,6 +225,77 @@ export default function AdminUsers() {
           </div>
         )}
       </div>
+
+      {modalOpen && (
+        <div className="modal-overlay" onClick={() => setModalOpen(false)}>
+          <div className="modal-container" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>{modalMode === 'create' ? 'Create New User' : 'Edit User Profile'}</h3>
+              <button className="btn-close" onClick={() => setModalOpen(false)}>✕</button>
+            </div>
+            <form onSubmit={handleSubmit}>
+              <div className="modal-body">
+                {formError && <div style={{ color: 'var(--danger)', fontSize: '0.85rem' }}>{formError}</div>}
+                
+                <div className="form-group">
+                  <label htmlFor="user-email">Email Address</label>
+                  <input
+                    id="user-email"
+                    type="email"
+                    required
+                    className="form-input"
+                    placeholder="name@example.com"
+                    value={formData.email}
+                    onChange={e => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="user-name">Full Name</label>
+                  <input
+                    id="user-name"
+                    type="text"
+                    className="form-input"
+                    placeholder="John Doe"
+                    value={formData.full_name}
+                    onChange={e => setFormData(prev => ({ ...prev, full_name: e.target.value }))}
+                  />
+                </div>
+
+                <div className="form-row-layout">
+                  <div className="form-group">
+                    <label htmlFor="user-role">Role</label>
+                    <select
+                      id="user-role"
+                      className="select-input"
+                      value={formData.role}
+                      onChange={e => setFormData(prev => ({ ...prev, role: e.target.value }))}
+                    >
+                      <option value="student">Student</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group" style={{ justifyContent: 'center', paddingTop: '1.2rem' }}>
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        checked={formData.is_active}
+                        onChange={e => setFormData(prev => ({ ...prev, is_active: e.target.checked }))}
+                      />
+                      Active Account
+                    </label>
+                  </div>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn-ghost" onClick={() => setModalOpen(false)}>Cancel</button>
+                <button type="submit" className="btn-primary">{modalMode === 'create' ? 'Create User' : 'Save Changes'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
