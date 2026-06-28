@@ -4,7 +4,7 @@ import api from '../api/client';
 
 const SESSION_ID = `chat-${Date.now()}`;
 
-export default function Chat({ user }) {
+export default function Chat({ user, theme, setTheme }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [streaming, setStreaming] = useState(false);
@@ -84,7 +84,14 @@ export default function Chat({ user }) {
       <nav className="chat-nav">
         <Link to="/dashboard" className="btn-ghost">← Dashboard</Link>
         <h2>AI Tutor</h2>
-        <div />
+        <button 
+          className="btn-ghost" 
+          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.4rem 0.6rem' }}
+          title={theme === 'dark' ? "Switch to Light Mode" : "Switch to Dark Mode"}
+        >
+          {theme === 'dark' ? '☀️' : '🌙'}
+        </button>
       </nav>
 
       <div className="chat-messages">

@@ -89,8 +89,8 @@ async def list_course_videos(
 ):
     await _assert_enrolled(current_user, course_id, db)
     query = select(CourseVideo).where(CourseVideo.course_id == course_id)
-    if current_user.role != "admin":
-        query = query.where(CourseVideo.is_published == True)
+    # if current_user.role != "admin":
+    #     query = query.where(CourseVideo.is_published == True)
     result = await db.execute(query.order_by(CourseVideo.sequence_order))
     return result.scalars().all()
 

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../api/client';
 
-export default function Dashboard({ user, setUser }) {
+export default function Dashboard({ user, setUser, theme, setTheme }) {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -31,6 +31,14 @@ export default function Dashboard({ user, setUser }) {
           )}
         </div>
         <div className="nav-user">
+          <button 
+            className="btn-ghost" 
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            style={{ marginRight: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.4rem 0.6rem' }}
+            title={theme === 'dark' ? "Switch to Light Mode" : "Switch to Dark Mode"}
+          >
+            {theme === 'dark' ? '☀️' : '🌙'}
+          </button>
           {user.avatar_url && <img src={user.avatar_url} className="avatar" alt="avatar" />}
           <span>{user.full_name || user.email}</span>
           <button className="btn-ghost" onClick={logout}>Sign out</button>

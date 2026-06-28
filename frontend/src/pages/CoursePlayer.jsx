@@ -59,7 +59,7 @@ function getPlayerTypeAndUrl(url) {
   };
 }
 
-export default function CoursePlayer({ user }) {
+export default function CoursePlayer({ user, theme, setTheme }) {
   const { courseId } = useParams();
   const [videos, setVideos] = useState([]);
   const [documents, setDocuments] = useState([]);
@@ -197,9 +197,19 @@ export default function CoursePlayer({ user }) {
     <div className="player-layout">
       {/* Sidebar */}
       <aside className="video-sidebar">
-        <Link to="/dashboard" className="btn-ghost" style={{ display: 'block', marginBottom: '1.25rem', textAlign: 'center', fontSize: '0.85rem' }}>
-          ← Back to Dashboard
-        </Link>
+        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem' }}>
+          <Link to="/dashboard" className="btn-ghost" style={{ flex: 1, textAlign: 'center', fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.4rem 0.5rem' }}>
+            ← Back
+          </Link>
+          <button 
+            className="btn-ghost" 
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.4rem 0.6rem' }}
+            title={theme === 'dark' ? "Switch to Light Mode" : "Switch to Dark Mode"}
+          >
+            {theme === 'dark' ? '☀️' : '🌙'}
+          </button>
+        </div>
 
         {/* Tab Selector */}
         <div className="tab-bar" style={{ marginBottom: '1.25rem' }}>

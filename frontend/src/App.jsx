@@ -20,6 +20,12 @@ function ProtectedRoute({ user, children, adminOnly = false }) {
 export default function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [theme, setTheme] = useState(() => localStorage.getItem('lms_theme') || 'dark');
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('lms_theme', theme);
+  }, [theme]);
 
   useEffect(() => {
     const token = localStorage.getItem('lms_token');
@@ -35,25 +41,37 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/login" element={<Login />} />
+        <Route path="/login" element={<Login />} theme={theme} setTheme={setTheme} />
         <Route path="/auth/callback" element={<AuthCallback setUser={setUser} />} />
         <Route path="/dashboard" element={
-          <ProtectedRoute user={user}><Dashboard user={user} setUser={setUser} /></ProtectedRoute>
+          <ProtectedRoute user={user}>
+            <Dashboard user={user} setUser={setUser} theme={theme} setTheme={setTheme} />
+          </ProtectedRoute>
         } />
         <Route path="/courses/:courseId" element={
-          <ProtectedRoute user={user}><CoursePlayer user={user} /></ProtectedRoute>
+          <ProtectedRoute user={user}>
+            <CoursePlayer user={user} theme={theme} setTheme={setTheme} />
+          </ProtectedRoute>
         } />
         <Route path="/chat" element={
-          <ProtectedRoute user={user}><Chat user={user} /></ProtectedRoute>
+          <ProtectedRoute user={user}>
+            <Chat user={user} theme={theme} setTheme={setTheme} />
+          </ProtectedRoute>
         } />
         <Route path="/assessment/:id" element={
-          <ProtectedRoute user={user}><Assessment user={user} /></ProtectedRoute>
+          <ProtectedRoute user={user}>
+            <Assessment user={user} />
+          </ProtectedRoute>
         } />
         <Route path="/admin/users" element={
-          <ProtectedRoute user={user} adminOnly><AdminUsers /></ProtectedRoute>
+          <ProtectedRoute user={user} adminOnly>
+            <AdminUsers />
+          </ProtectedRoute>
         } />
         <Route path="/admin/courses" element={
-          <ProtectedRoute user={user} adminOnly><AdminCourses /></ProtectedRoute>
+          <ProtectedRoute user={user} adminOnly>
+            <AdminCourses />
+          </ProtectedRoute>
         } />
         <Route path="*" element={<Navigate to={user ? '/dashboard' : '/login'} replace />} />
       </Routes>
