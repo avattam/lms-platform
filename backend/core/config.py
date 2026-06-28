@@ -16,6 +16,10 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: str = ""
     GOOGLE_CLIENT_SECRET: str = ""
 
+    # Google Drive Documents
+    GOOGLE_DRIVE_CREDENTIALS_FILE: str = "gdrive.json"
+    GOOGLE_DRIVE_FOLDER_ID: str = "17QW0i_zyZRvXJwb-4IaOpbOHCO0lMbUT"
+
     # Ollama
     OLLAMA_BASE_URL: str = "http://localhost:11435"
     LLM_MODEL: str = "qwen3:1.7b"

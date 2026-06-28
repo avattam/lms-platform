@@ -11,3 +11,9 @@ build/
 node_modules/
 frontend/dist/
 *.log
+
+# Google Drive credentials
+gdrive.json
+google_drive_credentials.json
+backend/gdrive.json
+backend/google_drive_credentials.json

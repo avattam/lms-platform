@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core.database import get_db
 from core.security import require_admin
 from models.db_models import Course, CourseDocument, CourseVideo, CourseViewLog, LearningPath, User, UserEnrollment
+from services.google_drive_service import upload_file_to_drive, delete_file_from_drive
 from schemas.pydantic_schemas import (
     CourseIn,
     CourseOut,
@@ -329,39 +330,43 @@ async def upload_course_documents(
     db: AsyncSession = Depends(get_db),
     _admin: User = Depends(require_admin),
 ):
-    import shutil
     # Validate course exists
     result = await db.execute(select(Course).where(Course.id == course_id))
     if not result.scalar_one_or_none():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
 
     docs = []
-    os.makedirs("uploads", exist_ok=True)
     
     for file in files:
-        # Generate a unique filename using UUID to prevent collisions
-        file_ext = os.path.splitext(file.filename)[1]
-        unique_filename = f"{uuid.uuid4()}{file_ext}"
-        file_path = os.path.join("uploads", unique_filename)
+        contents = await file.read()
+        file_size = len(contents)
         
-        # Save file to local uploads directory
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
+        try:
+            # Upload file to Google Drive
+            drive_file = await upload_file_to_drive(
+                filename=file.filename or "unknown",
+                file_bytes=contents,
+                mime_type=file.content_type or "application/octet-stream"
+            )
             
-        file_size = os.path.getsize(file_path)
-        
-        # Save document meta to database
-        # Make the file URL point to our static route
-        file_url = f"/static/uploads/{unique_filename}"
-        
-        doc = CourseDocument(
-            course_id=course_id,
-            filename=file.filename or "unknown",
-            file_url=file_url,
-            file_size=file_size,
-        )
-        db.add(doc)
-        docs.append(doc)
+            # Prefer webContentLink (direct download) if available, fallback to webViewLink
+            file_url = drive_file.get("webContentLink") or drive_file.get("webViewLink")
+            if not file_url:
+                raise Exception("Failed to generate download/view link from Google Drive.")
+                
+            doc = CourseDocument(
+                course_id=course_id,
+                filename=file.filename or "unknown",
+                file_url=file_url,
+                file_size=file_size,
+            )
+            db.add(doc)
+            docs.append(doc)
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Google Drive upload failed: {str(e)}"
+            )
         
     await db.commit()
     for doc in docs:
@@ -400,11 +405,8 @@ async def delete_course_document(
     if not doc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
 
-    # Remove file from local disk if it exists
-    filename = os.path.basename(doc.file_url)
-    file_path = os.path.join("uploads", filename)
-    if os.path.exists(file_path):
-        os.remove(file_path)
+    # Remove from Google Drive
+    await delete_file_from_drive(doc.file_url)
 
     await db.delete(doc)
     await db.commit()
