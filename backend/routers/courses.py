@@ -28,10 +28,12 @@ video_router = APIRouter(prefix="/video", tags=["Video Progress"])
 # ---------------------------------------------------------------------------
 # Helper: assert student is enrolled
 # ---------------------------------------------------------------------------
-async def _assert_enrolled(user_id: uuid.UUID, course_id: uuid.UUID, db: AsyncSession):
+async def _assert_enrolled(user: User, course_id: uuid.UUID, db: AsyncSession):
+    if user.role == "admin":
+        return
     result = await db.execute(
         select(UserEnrollment).where(
-            UserEnrollment.user_id == user_id,
+            UserEnrollment.user_id == user.id,
             UserEnrollment.course_id == course_id,
             UserEnrollment.removed_at.is_(None),
         )
@@ -68,8 +70,11 @@ async def get_course(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
-    await _assert_enrolled(current_user.id, course_id, db)
-    result = await db.execute(select(Course).where(Course.id == course_id, Course.is_published == True))
+    await _assert_enrolled(current_user, course_id, db)
+    query = select(Course).where(Course.id == course_id)
+    if current_user.role != "admin":
+        query = query.where(Course.is_published == True)
+    result = await db.execute(query)
     course = result.scalar_one_or_none()
     if not course:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found.")
@@ -82,12 +87,11 @@ async def list_course_videos(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
-    await _assert_enrolled(current_user.id, course_id, db)
-    result = await db.execute(
-        select(CourseVideo)
-        .where(CourseVideo.course_id == course_id, CourseVideo.is_published == True)
-        .order_by(CourseVideo.sequence_order)
-    )
+    await _assert_enrolled(current_user, course_id, db)
+    query = select(CourseVideo).where(CourseVideo.course_id == course_id)
+    if current_user.role != "admin":
+        query = query.where(CourseVideo.is_published == True)
+    result = await db.execute(query.order_by(CourseVideo.sequence_order))
     return result.scalars().all()
 
 
@@ -97,8 +101,11 @@ async def list_student_course_documents(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
-    await _assert_enrolled(current_user.id, course_id, db)
-    result = await db.execute(select(Course).where(Course.id == course_id, Course.is_published == True))
+    await _assert_enrolled(current_user, course_id, db)
+    query = select(Course).where(Course.id == course_id)
+    if current_user.role != "admin":
+        query = query.where(Course.is_published == True)
+    result = await db.execute(query)
     course = result.scalar_one_or_none()
     if not course:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found.")
