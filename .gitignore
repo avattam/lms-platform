@@ -17,3 +17,7 @@ gdrive.json
 google_drive_credentials.json
 backend/gdrive.json
 backend/google_drive_credentials.json
+token.json
+backend/token.json
+oauth_client_secret.json
+backend/oauth_client_secret.json

@@ -18,6 +18,7 @@ class Settings(BaseSettings):
 
     # Google Drive Documents
     GOOGLE_DRIVE_CREDENTIALS_FILE: str = "gdrive.json"
+    GOOGLE_DRIVE_TOKEN_FILE: str = "token.json"
     GOOGLE_DRIVE_FOLDER_ID: str = "17QW0i_zyZRvXJwb-4IaOpbOHCO0lMbUT"
 
     # Ollama

@@ -2,21 +2,37 @@ import os
 import io
 import re
 import urllib.parse
-from google.oauth2 import service_account
+from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 from core.config import settings
 
 def get_drive_service():
-    """Authenticate and return Google Drive service client."""
-    creds_path = settings.GOOGLE_DRIVE_CREDENTIALS_FILE
-    if not os.path.exists(creds_path):
-        return None
+    """Authenticate and return Google Drive service client using OAuth 2.0 Credentials."""
+    token_path = settings.GOOGLE_DRIVE_TOKEN_FILE
     
-    scopes = ["https://www.googleapis.com/auth/drive"]
-    creds = service_account.Credentials.from_service_account_file(
-        creds_path, scopes=scopes
-    )
+    creds = None
+    if os.path.exists(token_path):
+        creds = Credentials.from_authorized_user_file(
+            token_path, 
+            scopes=["https://www.googleapis.com/auth/drive"]
+        )
+        
+    # If credentials are expired, attempt to refresh them
+    if creds and creds.expired and creds.refresh_token:
+        try:
+            creds.refresh(Request())
+            # Save the refreshed credentials back to file
+            with open(token_path, "w") as token:
+                token.write(creds.to_json())
+        except Exception as e:
+            print(f"Error refreshing Google Drive OAuth token: {e}")
+            creds = None
+            
+    if not creds:
+        return None
+        
     return build("drive", "v3", credentials=creds)
 
 def extract_drive_file_id(url: str) -> str | None:
@@ -39,8 +55,8 @@ async def upload_file_to_drive(filename: str, file_bytes: bytes, mime_type: str)
     service = get_drive_service()
     if not service:
         raise Exception(
-            f"Google Drive credentials file not found at '{settings.GOOGLE_DRIVE_CREDENTIALS_FILE}'. "
-            "Please upload the Service Account credentials JSON."
+            f"Google Drive OAuth token file '{settings.GOOGLE_DRIVE_TOKEN_FILE}' not found. "
+            "Please run 'python backend/generate_token.py' on your host system to authenticate."
         )
     
     file_metadata = {
