@@ -13,7 +13,9 @@ import sys
 import os
 
 # Ensure backend package is importable
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "backend")))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 
 from core.database import AsyncSessionLocal
 from services.ingestion_service import ingest_file, ingest_url
@@ -26,7 +28,7 @@ async def main():
     group.add_argument("--url", help="URL or Wikipedia page title to ingest")
 
     parser.add_argument("--title", help="Title for the knowledge asset", default="")
-    parser.add_argument("--type", choices=["pdf", "image", "url", "wiki"], default="pdf",
+    parser.add_argument("--type", choices=["pdf", "image", "url", "wiki", "youtube"], default="pdf",
                         help="Source type (default: pdf)")
     args = parser.parse_args()
 
