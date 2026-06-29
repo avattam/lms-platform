@@ -35,11 +35,11 @@ async def _hybrid_search(query: str, db: AsyncSession, top_k: int = 5) -> list[d
     sql = text("""
         WITH semantic AS (
             SELECT id, chunk_text, metadata,
-                   1 - (embedding <=> :embedding::vector) AS sem_score,
-                   ROW_NUMBER() OVER (ORDER BY embedding <=> :embedding::vector) AS sem_rank
+                   1 - (embedding <=> CAST(:embedding AS vector)) AS sem_score,
+                   ROW_NUMBER() OVER (ORDER BY embedding <=> CAST(:embedding AS vector)) AS sem_rank
             FROM document_chunks
             WHERE embedding IS NOT NULL
-            ORDER BY embedding <=> :embedding::vector
+            ORDER BY embedding <=> CAST(:embedding AS vector)
             LIMIT :top_k
         ),
         keyword AS (
