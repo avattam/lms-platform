@@ -170,6 +170,33 @@ export default function AdminCourses() {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       setDocuments(prev => [...data, ...prev]);
+
+      // Ingest eligible files into vector store for RAG search
+      const allowedTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
+      for (const file of files) {
+        if (!allowedTypes.includes(file.type)) {
+          console.warn(`Skipping ingestion for unsupported file type: ${file.name} (${file.type})`);
+          continue;
+        }
+
+        const ingestFormData = new FormData();
+        ingestFormData.append('file', file);
+        ingestFormData.append('title', file.name);
+        
+        let sourceType = 'pdf';
+        if (file.type.startsWith('image/')) {
+          sourceType = 'image';
+        }
+        ingestFormData.append('source_type', sourceType);
+
+        try {
+          await api.post('/ingest/file', ingestFormData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+          });
+        } catch (ingestErr) {
+          console.error(`Failed to ingest file ${file.name}:`, ingestErr);
+        }
+      }
     } catch (err) {
       alert(err.response?.data?.detail || 'Failed to upload documents.');
     }

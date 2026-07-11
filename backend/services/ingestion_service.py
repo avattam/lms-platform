@@ -1,4 +1,5 @@
 """Ingestion service — parse documents and store chunks + embeddings."""
+from langchain_core.documents import Document
 import io
 import uuid
 from typing import Any
@@ -18,17 +19,39 @@ CHUNK_OVERLAP = 64
 
 def _split_text(text: str) -> list[str]:
     """LangChain RecursiveCharacterTextSplitter."""
+    text = text.replace("\x00", "")
     splitter = RecursiveCharacterTextSplitter(chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP)
     docs = splitter.create_documents([text])
     return [doc.page_content for doc in docs]
 
+def _split_docs(docs: list[Document]) -> list[Document]:
+    """LangChain RecursiveCharacterTextSplitter."""
+    # Sanitize null bytes to prevent database write errors
+    for doc in docs:
+        if doc.page_content:
+            doc.page_content = doc.page_content.replace("\x00", "")
+            
+    splitter = RecursiveCharacterTextSplitter(chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP)
+    doc_split = splitter.split_documents(docs)
+    return doc_split
+
 async def _embed_texts(texts: list[str]) -> list[list[float]]:
-    """Batch embed texts via LangChain OllamaEmbeddings."""
+    """Batch embed texts via LangChain OllamaEmbeddings with manual batching to prevent Ollama crashes."""
+    if not texts:
+        return []
+        
     embeddings_model = OllamaEmbeddings(
         model=settings.EMBED_MODEL,
         base_url=settings.OLLAMA_BASE_URL,
     )
-    return await embeddings_model.aembed_documents(texts)
+    
+    batch_size = 32
+    results = []
+    for i in range(0, len(texts), batch_size):
+        batch = texts[i:i + batch_size]
+        batch_embeddings = await embeddings_model.aembed_documents(batch)
+        results.extend(batch_embeddings)
+    return results
 
 
 async def _store_chunks(
@@ -37,14 +60,18 @@ async def _store_chunks(
     embeddings: list[list[float]],
     db: AsyncSession,
     extra_metadata: dict | None = None,
+    chunk_metadatas: list[dict] | None = None,
 ) -> int:
     for i, (chunk_text, embedding) in enumerate(zip(chunks, embeddings)):
+        meta = {**(extra_metadata or {}), "chunk_index": i}
+        if chunk_metadatas and i < len(chunk_metadatas):
+            meta.update(chunk_metadatas[i])
         chunk = DocumentChunk(
             asset_id=asset.id,
             chunk_text=chunk_text,
             chunk_index=i,
             embedding=embedding,
-            metadata_={**(extra_metadata or {}), "chunk_index": i},
+            metadata_=meta,
         )
         db.add(chunk)
     await db.commit()
@@ -60,14 +87,114 @@ async def ingest_file(
     db: AsyncSession,
 ) -> dict:
     """Parse a PDF or image file and store chunks in pgvector."""
-    try:
-        from unstructured.partition.auto import partition
+    raw_text = ""
+    documentSplit = []  # list[Document] with per-chunk page_content + metadata
 
-        elements = partition(file=io.BytesIO(file_bytes), metadata_filename=filename)
-        raw_text = "\n".join(str(e) for e in elements if str(e).strip())
-    except ImportError:
-        # Fallback: treat as plain text (for testing without unstructured)
-        raw_text = file_bytes.decode("utf-8", errors="ignore")
+    if filename.lower().endswith(".pdf") or source_type == "pdf":
+        print(f"[ingest] Processing PDF: {filename} ({len(file_bytes)} bytes)")
+
+        # ── Stage 1: pypdf ────────────────────────────────────────────────────
+        try:
+            import pypdf
+            reader = pypdf.PdfReader(io.BytesIO(file_bytes))
+            is_encrypted = reader.is_encrypted
+            print(f"[ingest][pypdf] pages={len(reader.pages)}, encrypted={is_encrypted}")
+            page_docs: list[Document] = []
+            for page_num, page in enumerate(reader.pages):
+                page_text = (page.extract_text() or "").replace("\x00", "").strip()
+                print(f"[ingest][pypdf] page {page_num+1}: {len(page_text)} chars")
+                if page_text:
+                    page_docs.append(
+                        Document(
+                            page_content=page_text,
+                            metadata={"source": filename, "page": page_num + 1},
+                        )
+                    )
+            if page_docs:
+                documentSplit = _split_docs(page_docs)
+                raw_text = "\n".join(doc.page_content for doc in page_docs)
+                print(f"[ingest][pypdf] extracted {len(raw_text)} chars, {len(documentSplit)} chunks")
+        except Exception as e:
+            print(f"[ingest][pypdf] FAILED: {e}")
+
+        # ── Stage 2: pdfplumber ───────────────────────────────────────────────
+        if not raw_text.strip():
+            try:
+                import pdfplumber
+                with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
+                    page_docs = []
+                    for page_num, page in enumerate(pdf.pages):
+                        page_text = (page.extract_text() or "").replace("\x00", "").strip()
+                        print(f"[ingest][pdfplumber] page {page_num+1}: {len(page_text)} chars")
+                        if page_text:
+                            page_docs.append(
+                                Document(
+                                    page_content=page_text,
+                                    metadata={"source": filename, "page": page_num + 1},
+                                )
+                            )
+                if page_docs:
+                    documentSplit = _split_docs(page_docs)
+                    raw_text = "\n".join(doc.page_content for doc in page_docs)
+                    print(f"[ingest][pdfplumber] extracted {len(raw_text)} chars, {len(documentSplit)} chunks")
+                else:
+                    print("[ingest][pdfplumber] no text found in any page")
+            except Exception as e:
+                print(f"[ingest][pdfplumber] FAILED: {e}")
+
+        # ── Stage 3: PyMuPDF (fitz) — handles embedded fonts & complex PDFs ──
+        if not raw_text.strip():
+            try:
+                import fitz  # PyMuPDF
+                doc_fitz = fitz.open(stream=file_bytes, filetype="pdf")
+                page_docs = []
+                for page_num in range(len(doc_fitz)):
+                    page = doc_fitz[page_num]
+                    page_text = page.get_text("text").replace("\x00", "").strip()
+                    print(f"[ingest][pymupdf] page {page_num+1}: {len(page_text)} chars")
+                    if page_text:
+                        page_docs.append(
+                            Document(
+                                page_content=page_text,
+                                metadata={"source": filename, "page": page_num + 1},
+                            )
+                        )
+                doc_fitz.close()
+                if page_docs:
+                    documentSplit = _split_docs(page_docs)
+                    raw_text = "\n".join(doc.page_content for doc in page_docs)
+                    print(f"[ingest][pymupdf] extracted {len(raw_text)} chars, {len(documentSplit)} chunks")
+                else:
+                    print("[ingest][pymupdf] no text found — PDF may be image-only/scanned")
+            except Exception as e:
+                print(f"[ingest][pymupdf] FAILED: {e}")
+
+        # ── Stage 4: unstructured (OCR / fallback layout parser) ─────────────
+        if not raw_text.strip():
+            try:
+                from unstructured.partition.auto import partition
+                elements = partition(file=io.BytesIO(file_bytes), metadata_filename=filename)
+                raw_text = "\n".join(str(e) for e in elements if str(e).strip())
+                print(f"[ingest][unstructured] extracted {len(raw_text)} chars")
+            except Exception as e:
+                print(f"[ingest][unstructured] FAILED: {e}")
+
+        if not raw_text.strip():
+            print(f"[ingest] WARNING: All PDF extractors failed — PDF may be scanned/image-only with no OCR support")
+            return {
+                "asset_id": None,
+                "chunks_stored": 0,
+                "message": f"Could not extract text from {filename}. The PDF may be scanned or image-only.",
+            }
+
+    # ── Non-PDF files: unstructured partition ─────────────────────────────────
+    else:
+        try:
+            from unstructured.partition.auto import partition
+            elements = partition(file=io.BytesIO(file_bytes), metadata_filename=filename)
+            raw_text = "\n".join(str(e) for e in elements if str(e).strip())
+        except Exception as e:
+            print(f"[ingest][unstructured non-pdf] FAILED: {e}")
 
     asset = KnowledgeAsset(
         title=title,
@@ -78,11 +205,21 @@ async def ingest_file(
     db.add(asset)
     await db.flush()
 
-    chunks = _split_text(raw_text)
+    if documentSplit:
+        chunks = [doc.page_content for doc in documentSplit]
+        chunk_metadatas = [doc.metadata for doc in documentSplit]
+    else:
+        chunks = _split_text(raw_text)
+        chunk_metadatas = None
+
     embeddings = await _embed_texts(chunks)
-    count = await _store_chunks(asset, chunks, embeddings, db, {"filename": filename})
+    count = await _store_chunks(asset, chunks, embeddings, db, {"filename": filename}, chunk_metadatas)
 
     return {"asset_id": asset.id, "chunks_stored": count, "message": f"Ingested {count} chunks from {filename}."}
+
+
+
+
 
 
 def extract_youtube_id(url: str) -> str | None:
@@ -125,6 +262,7 @@ async def ingest_url(
     db: AsyncSession,
 ) -> dict:
     """Fetch and ingest content from a URL or Wikipedia page."""
+    documentSplit = []
     if "drive.google.com" in url and "/file/d/" in url:
         parts = url.split("/file/d/")
         if len(parts) > 1:
@@ -174,18 +312,32 @@ async def ingest_url(
                 match = re.search(r'filename="?([^";]+)"?', cd)
                 if match:
                     filename = match.group(1)
-            
-            try:
-                from unstructured.partition.auto import partition
-                elements = partition(file=io.BytesIO(resp.content), metadata_filename=filename)
-                raw_text = "\n".join(str(e) for e in elements if str(e).strip())
-                title = filename
-            except Exception as e:
-                if content_type.startswith("text/"):
-                    raw_text = resp.content.decode("utf-8", errors="ignore")
+
+            # Try OnlinePDFLoader from langchain_community if URL points to a PDF
+            is_pdf = filename.lower().endswith(".pdf") or "application/pdf" in content_type
+            if is_pdf:
+                try:
+                    from langchain_community.document_loaders import OnlinePDFLoader
+                    loader = OnlinePDFLoader(url)
+                    docs = loader.load()
+                    documentSplit = _split_docs(docs)
+                    raw_text = "\n".join(doc.page_content for doc in docs)
                     title = filename
-                else:
-                    raise ValueError(f"Failed to parse binary document from URL: {e}")
+                except Exception as e:
+                    print(f"OnlinePDFLoader failed: {e}")
+
+            if not raw_text.strip():
+                try:
+                    from unstructured.partition.auto import partition
+                    elements = partition(file=io.BytesIO(resp.content), metadata_filename=filename)
+                    raw_text = "\n".join(str(e) for e in elements if str(e).strip())
+                    title = filename
+                except Exception as e:
+                    if content_type.startswith("text/"):
+                        raw_text = resp.content.decode("utf-8", errors="ignore")
+                        title = filename
+                    else:
+                        raise ValueError(f"Failed to parse binary document from URL: {e}")
 
     asset = KnowledgeAsset(
         title=title or url,
@@ -196,8 +348,14 @@ async def ingest_url(
     db.add(asset)
     await db.flush()
 
-    chunks = _split_text(raw_text)
+    if documentSplit:
+        chunks = [doc.page_content for doc in documentSplit]
+        chunk_metadatas = [doc.metadata for doc in documentSplit]
+    else:
+        chunks = _split_text(raw_text)
+        chunk_metadatas = None
+
     embeddings = await _embed_texts(chunks)
-    count = await _store_chunks(asset, chunks, embeddings, db, {"source_url": url})
+    count = await _store_chunks(asset, chunks, embeddings, db, {"source_url": url}, chunk_metadatas)
 
     return {"asset_id": asset.id, "chunks_stored": count, "message": f"Ingested {count} chunks from {url}."}
