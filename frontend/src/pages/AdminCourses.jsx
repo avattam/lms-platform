@@ -172,9 +172,21 @@ export default function AdminCourses() {
       setDocuments(prev => [...data, ...prev]);
 
       // Ingest eligible files into vector store for RAG search
-      const allowedTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
+      const allowedTypes = [
+        'application/pdf',
+        'image/png',
+        'image/jpeg',
+        'image/jpg',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        'application/vnd.ms-powerpoint'
+      ];
+      const allowedExtensions = ['.pdf', '.png', '.jpg', '.jpeg', '.docx', '.doc', '.pptx', '.ppt'];
+
       for (const file of files) {
-        if (!allowedTypes.includes(file.type)) {
+        const ext = file.name.includes('.') ? file.name.slice(file.name.lastIndexOf('.')).toLowerCase() : '';
+        if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(ext)) {
           console.warn(`Skipping ingestion for unsupported file type: ${file.name} (${file.type})`);
           continue;
         }
@@ -186,6 +198,10 @@ export default function AdminCourses() {
         let sourceType = 'pdf';
         if (file.type.startsWith('image/')) {
           sourceType = 'image';
+        } else if (ext === '.docx' || ext === '.doc') {
+          sourceType = 'docx';
+        } else if (ext === '.pptx' || ext === '.ppt') {
+          sourceType = 'pptx';
         }
         ingestFormData.append('source_type', sourceType);
 
@@ -404,6 +420,7 @@ export default function AdminCourses() {
                     <input 
                       type="file" 
                       multiple 
+                      accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.ppt,.pptx"
                       className="form-input" 
                       onChange={uploadDocuments} 
                       style={{ padding: '0.4rem 0.6rem', fontSize: '0.85rem' }} 

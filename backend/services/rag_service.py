@@ -134,6 +134,7 @@ If the context does not contain the answer, say so honestly.
 
     async with httpx.AsyncClient(timeout=120.0) as client:
         async with client.stream("POST", OLLAMA_GENERATE_URL, json=payload) as response:
+            response.raise_for_status()
             import json as _json
             async for line in response.aiter_lines():
                 if not line.strip():

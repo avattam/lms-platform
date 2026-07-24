@@ -23,7 +23,7 @@ class Settings(BaseSettings):
 
     # Ollama
     OLLAMA_BASE_URL: str = "http://localhost:11434"
-    LLM_MODEL: str = "qwen3:1.7b"
+    LLM_MODEL: str = "llama3.2:latest"
     EMBED_MODEL: str = "nomic-embed-text"
 
     # App

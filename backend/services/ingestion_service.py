@@ -187,14 +187,65 @@ async def ingest_file(
                 "message": f"Could not extract text from {filename}. The PDF may be scanned or image-only.",
             }
 
-    # ── Non-PDF files: unstructured partition ─────────────────────────────────
-    else:
+    # ── PPTX / PPT files: python-pptx ─────────────────────────────────────────
+    elif filename.lower().endswith(".pptx") or filename.lower().endswith(".ppt") or source_type == "pptx":
+        print(f"[ingest] Processing PPTX: {filename} ({len(file_bytes)} bytes)")
+        try:
+            import pptx
+            prs = pptx.Presentation(io.BytesIO(file_bytes))
+            slide_docs: list[Document] = []
+            for slide_num, slide in enumerate(prs.slides):
+                slide_texts = []
+                for shape in slide.shapes:
+                    if shape.has_text_frame:
+                        for paragraph in shape.text_frame.paragraphs:
+                            t = (paragraph.text or "").replace("\x00", "").strip()
+                            if t:
+                                slide_texts.append(t)
+                if slide_texts:
+                    slide_docs.append(
+                        Document(
+                            page_content="\n".join(slide_texts),
+                            metadata={"source": filename, "slide": slide_num + 1},
+                        )
+                    )
+            if slide_docs:
+                documentSplit = _split_docs(slide_docs)
+                raw_text = "\n".join(doc.page_content for doc in slide_docs)
+                print(f"[ingest][pptx] extracted {len(raw_text)} chars, {len(documentSplit)} chunks")
+        except Exception as e:
+            print(f"[ingest][pptx] FAILED: {e}")
+
+    # ── DOCX / DOC files: python-docx ─────────────────────────────────────────
+    elif filename.lower().endswith(".docx") or filename.lower().endswith(".doc") or source_type == "docx":
+        print(f"[ingest] Processing DOCX: {filename} ({len(file_bytes)} bytes)")
+        try:
+            import docx
+            doc = docx.Document(io.BytesIO(file_bytes))
+            paragraphs = [(p.text or "").replace("\x00", "").strip() for p in doc.paragraphs if (p.text or "").strip()]
+            if paragraphs:
+                raw_text = "\n\n".join(paragraphs)
+                print(f"[ingest][docx] extracted {len(raw_text)} chars")
+        except Exception as e:
+            print(f"[ingest][docx] FAILED: {e}")
+
+    # ── Fallback for image / other files: unstructured partition ──────────────
+    if not raw_text.strip() and not documentSplit:
         try:
             from unstructured.partition.auto import partition
             elements = partition(file=io.BytesIO(file_bytes), metadata_filename=filename)
             raw_text = "\n".join(str(e) for e in elements if str(e).strip())
+            print(f"[ingest][unstructured fallback] extracted {len(raw_text)} chars")
         except Exception as e:
-            print(f"[ingest][unstructured non-pdf] FAILED: {e}")
+            print(f"[ingest][unstructured fallback] FAILED: {e}")
+
+    if not raw_text.strip() and not documentSplit:
+        print(f"[ingest] WARNING: Could not extract text from {filename}")
+        return {
+            "asset_id": None,
+            "chunks_stored": 0,
+            "message": f"Could not extract text from {filename}.",
+        }
 
     asset = KnowledgeAsset(
         title=title,

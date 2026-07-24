@@ -1,4 +1,5 @@
 """Document ingestion router — PDF, URL, Wiki → chunks → pgvector."""
+import os
 import uuid
 from typing import Annotated
 
@@ -22,11 +23,24 @@ async def ingest_document_file(
     db: AsyncSession = Depends(get_db),
     admin: User = Depends(require_admin),
 ):
-    """Upload a PDF or image file for ingestion into the vector store."""
-    if file.content_type not in ("application/pdf", "image/png", "image/jpeg", "image/jpg"):
+    """Upload a PDF, image, DOCX, or PPTX file for ingestion into the vector store."""
+    allowed_types = (
+        "application/pdf",
+        "image/png",
+        "image/jpeg",
+        "image/jpg",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        "application/vnd.ms-powerpoint",
+        "application/octet-stream",
+    )
+    ext = os.path.splitext(file.filename or "")[1].lower()
+    allowed_exts = (".pdf", ".png", ".jpg", ".jpeg", ".docx", ".doc", ".pptx", ".ppt")
+    if file.content_type not in allowed_types and ext not in allowed_exts:
         raise HTTPException(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-            detail="Supported types: PDF, PNG, JPEG",
+            detail="Supported types: PDF, PNG, JPEG, DOCX, PPTX",
         )
     contents = await file.read()
     result = await ingest_file(
