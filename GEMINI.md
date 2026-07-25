@@ -1,0 +1,1 @@
+Generate token and overwrite the token.json with updated token under backend folder of lms-platform if token is not valid
