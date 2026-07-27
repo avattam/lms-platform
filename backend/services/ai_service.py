@@ -7,7 +7,17 @@ import httpx
 
 from core.config import settings
 
+import os
+
 logger = logging.getLogger(__name__)
+
+
+def _get_api_key() -> str:
+    """Get non-empty OpenAI API Key from environment or settings."""
+    key = (os.getenv("OPENAI_API_KEY") or "").strip()
+    if not key:
+        key = (settings.OPENAI_API_KEY or "").strip()
+    return key
 
 
 async def generate_text(prompt: str, temperature: float = 0.1) -> str:
@@ -15,13 +25,14 @@ async def generate_text(prompt: str, temperature: float = 0.1) -> str:
     provider = (settings.AI_PROVIDER or "openai").lower()
 
     if provider == "openai":
-        if not settings.OPENAI_API_KEY:
+        api_key = _get_api_key()
+        if not api_key:
             logger.warning("OPENAI_API_KEY is not set. Requests to OpenAI may fail.")
 
-        headers = {
-            "Authorization": f"Bearer {settings.OPENAI_API_KEY}",
-            "Content-Type": "application/json",
-        }
+        headers = {"Content-Type": "application/json"}
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
+
         payload = {
             "model": settings.OPENAI_LLM_MODEL,
             "messages": [{"role": "user", "content": prompt}],
@@ -62,10 +73,11 @@ async def stream_chat_response(
     provider = (settings.AI_PROVIDER or "openai").lower()
 
     if provider == "openai":
-        headers = {
-            "Authorization": f"Bearer {settings.OPENAI_API_KEY}",
-            "Content-Type": "application/json",
-        }
+        api_key = _get_api_key()
+        headers = {"Content-Type": "application/json"}
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
+
         payload = {
             "model": settings.OPENAI_LLM_MODEL,
             "messages": [{"role": "user", "content": prompt}],
@@ -132,14 +144,15 @@ async def get_embedding(text_input: str) -> list[float]:
     provider = (settings.AI_PROVIDER or "openai").lower()
 
     if provider == "openai":
-        headers = {
-            "Authorization": f"Bearer {settings.OPENAI_API_KEY}",
-            "Content-Type": "application/json",
-        }
+        api_key = _get_api_key()
+        headers = {"Content-Type": "application/json"}
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
+
         payload = {
             "model": settings.OPENAI_EMBED_MODEL,
             "input": text_input,
-            "dimensions": settings.OPENAI_EMBED_DIMENSIONS,
+            "dimensions": int(settings.OPENAI_EMBED_DIMENSIONS),
         }
         url = f"{settings.OPENAI_BASE_URL.rstrip('/')}/embeddings"
 
@@ -168,10 +181,11 @@ async def get_embeddings_batch(texts: list[str]) -> list[list[float]]:
     provider = (settings.AI_PROVIDER or "openai").lower()
 
     if provider == "openai":
-        headers = {
-            "Authorization": f"Bearer {settings.OPENAI_API_KEY}",
-            "Content-Type": "application/json",
-        }
+        api_key = _get_api_key()
+        headers = {"Content-Type": "application/json"}
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
+
         url = f"{settings.OPENAI_BASE_URL.rstrip('/')}/embeddings"
 
         batch_size = 100
@@ -182,7 +196,7 @@ async def get_embeddings_batch(texts: list[str]) -> list[list[float]]:
             payload = {
                 "model": settings.OPENAI_EMBED_MODEL,
                 "input": batch,
-                "dimensions": settings.OPENAI_EMBED_DIMENSIONS,
+                "dimensions": int(settings.OPENAI_EMBED_DIMENSIONS),
             }
             async with httpx.AsyncClient(timeout=60.0) as client:
                 resp = await client.post(url, json=payload, headers=headers)

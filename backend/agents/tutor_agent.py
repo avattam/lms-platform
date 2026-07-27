@@ -1,31 +1,28 @@
 """LangChain AI Tutor Agent with Granular SSE Event Streaming."""
-from dotenv import load_dotenv
 import json
 import logging
-import os
 from collections.abc import AsyncGenerator
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from core.config import settings
 from agents.tools import create_lms_tools
 from services.search_service import hybrid_search
 
-load_dotenv()
 logger = logging.getLogger(__name__)
 
 
 def _get_llm():
     """Get configured LangChain Chat Model (ChatOpenAI or ChatOllama)."""
-    provider = (os.getenv("AI_PROVIDER") or "openai").lower()
+    provider = (settings.AI_PROVIDER or "openai").lower()
 
     if provider == "openai":
         from langchain_openai import ChatOpenAI
 
         return ChatOpenAI(
-            model=os.getenv("OPENAI_LLM_MODEL") or "gpt-4o-mini",
-            api_key=os.getenv("OPENAI_API_KEY") or "sk-placeholder",
-            base_url=os.getenv("OPENAI_BASE_URL") or "https://api.openai.com/v1",
+            model=settings.OPENAI_LLM_MODEL or "gpt-4o-mini",
+            api_key=settings.OPENAI_API_KEY or "sk-placeholder",
+            base_url=settings.OPENAI_BASE_URL or "https://api.openai.com/v1",
             temperature=0.7,
             streaming=True,
         )
@@ -33,8 +30,8 @@ def _get_llm():
         from langchain_ollama import ChatOllama
 
         return ChatOllama(
-            model=os.getenv("LLM_MODEL") or "qwen3:4b",
-            base_url=os.getenv("OLLAMA_BASE_URL") or "http://localhost:11434",
+            model=settings.LLM_MODEL or "qwen3:4b",
+            base_url=settings.OLLAMA_BASE_URL or "http://localhost:11434",
             temperature=0.7,
         )
 
