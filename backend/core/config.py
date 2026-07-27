@@ -22,9 +22,10 @@ class Settings(BaseSettings):
     GOOGLE_DRIVE_FOLDER_ID: str = "17QW0i_zyZRvXJwb-4IaOpbOHCO0lMbUT"
 
     # Ollama
-    OLLAMA_BASE_URL: str = "http://localhost:11434"
-    LLM_MODEL: str = "qwen3:4b"
-    EMBED_MODEL: str = "nomic-embed-text"
+    # OLLAMA_BASE_URL: str = "http://localhost:11434"
+    # LLM_MODEL: str = "qwen3:4b"
+    # EMBED_MODEL: str = "nomic-embed-text"
+    
 
     # App
     APP_BASE_URL: str = "http://backend:8000"

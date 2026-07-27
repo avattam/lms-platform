@@ -21,3 +21,4 @@ token.json
 backend/token.json
 oauth_client_secret.json
 backend/oauth_client_secret.json
+.env

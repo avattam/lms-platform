@@ -10,7 +10,7 @@ from core.database import get_db
 from core.security import get_current_user
 from models.db_models import User
 from schemas.pydantic_schemas import ChatMessageIn
-from services.rag_service import stream_rag_response
+from services.agent_service import stream_agentic_rag_response
 
 router = APIRouter(prefix="/chat", tags=["RAG Chatbot"])
 
@@ -21,9 +21,9 @@ async def chat(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
-    """Stream a RAG-augmented response to the user's message."""
+    """Stream a LangChain Agent response to the user's message."""
     return StreamingResponse(
-        stream_rag_response(
+        stream_agentic_rag_response(
             session_id=body.session_id,
             user_id=str(current_user.id),
             user_message=body.message,

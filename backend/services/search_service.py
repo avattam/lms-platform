@@ -2,20 +2,12 @@
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-import httpx
-from core.config import settings
-
-OLLAMA_EMBED_URL = f"{settings.OLLAMA_BASE_URL}/api/embeddings"
+from services.ai_service import get_embedding
 
 
 async def _embed(text_input: str) -> list[float]:
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        resp = await client.post(
-            OLLAMA_EMBED_URL,
-            json={"model": settings.EMBED_MODEL, "prompt": text_input},
-        )
-        resp.raise_for_status()
-        return resp.json()["embedding"]
+    """Generate vector embedding via unified AI service (OpenAI / Ollama)."""
+    return await get_embedding(text_input)
 
 
 async def hybrid_search(

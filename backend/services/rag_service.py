@@ -1,26 +1,16 @@
-"""LangChain RAG service — hybrid search (pgvector + FTS) + streaming response."""
+"""RAG service — hybrid search (pgvector + FTS) + streaming response via AI Service (OpenAI / Ollama)."""
 from collections.abc import AsyncGenerator
 
-import httpx
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.config import settings
 from models.db_models import ChatMessage
-
-OLLAMA_GENERATE_URL = f"{settings.OLLAMA_BASE_URL}/api/generate"
-OLLAMA_EMBED_URL = f"{settings.OLLAMA_BASE_URL}/api/embeddings"
+from services.ai_service import get_embedding, stream_chat_response
 
 
 async def _embed(text_input: str) -> list[float]:
-    """Generate embedding via Ollama nomic-embed-text."""
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        resp = await client.post(
-            OLLAMA_EMBED_URL,
-            json={"model": settings.EMBED_MODEL, "prompt": text_input},
-        )
-        resp.raise_for_status()
-        return resp.json()["embedding"]
+    """Generate vector embedding via unified AI service (OpenAI / Ollama)."""
+    return await get_embedding(text_input)
 
 
 async def _hybrid_search(query: str, db: AsyncSession, top_k: int = 5) -> list[dict]:
@@ -125,31 +115,15 @@ If the context does not contain the answer, say so honestly.
 === YOUR ANSWER ==="""
 
     full_response = ""
-    payload = {
-        "model": settings.LLM_MODEL,
-        "prompt": prompt,
-        "stream": True,
-        "options": {"temperature": 0.7},
-    }
-
-    async with httpx.AsyncClient(timeout=120.0) as client:
-        async with client.stream("POST", OLLAMA_GENERATE_URL, json=payload) as response:
-            response.raise_for_status()
-            import json as _json
-            async for line in response.aiter_lines():
-                if not line.strip():
-                    continue
-                try:
-                    data = _json.loads(line)
-                    token = data.get("response", "")
-                    full_response += token
-                    yield f"data: {_json.dumps({'token': token})}\n\n"
-                    if data.get("done"):
-                        break
-                except _json.JSONDecodeError:
-                    continue
-
-    yield "data: [DONE]\n\n"
+    async for sse_chunk in stream_chat_response(prompt, temperature=0.7):
+        yield sse_chunk
+        if sse_chunk.startswith("data: ") and not sse_chunk.startswith("data: [DONE]"):
+            try:
+                import json as _json
+                payload_data = _json.loads(sse_chunk[6:].strip())
+                full_response += payload_data.get("token", "")
+            except Exception:
+                pass
 
     # Persist conversation
     await _save_messages(session_id, user_id, user_message, full_response, db)

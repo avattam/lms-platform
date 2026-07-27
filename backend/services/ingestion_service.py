@@ -11,8 +11,7 @@ from core.config import settings
 from models.db_models import DocumentChunk, KnowledgeAsset
 
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-# pyrefly: ignore [missing-import]
-from langchain_ollama import OllamaEmbeddings
+from services.ai_service import get_embeddings_batch
 
 CHUNK_SIZE = 512
 CHUNK_OVERLAP = 64
@@ -36,22 +35,8 @@ def _split_docs(docs: list[Document]) -> list[Document]:
     return doc_split
 
 async def _embed_texts(texts: list[str]) -> list[list[float]]:
-    """Batch embed texts via LangChain OllamaEmbeddings with manual batching to prevent Ollama crashes."""
-    if not texts:
-        return []
-        
-    embeddings_model = OllamaEmbeddings(
-        model=settings.EMBED_MODEL,
-        base_url=settings.OLLAMA_BASE_URL,
-    )
-    
-    batch_size = 32
-    results = []
-    for i in range(0, len(texts), batch_size):
-        batch = texts[i:i + batch_size]
-        batch_embeddings = await embeddings_model.aembed_documents(batch)
-        results.extend(batch_embeddings)
-    return results
+    """Batch embed texts via unified AI service (OpenAI / Ollama)."""
+    return await get_embeddings_batch(texts)
 
 
 async def _store_chunks(

@@ -1,25 +1,7 @@
-"""Two-pass LLM assessment grading via Ollama (Qwen3-1.7B)."""
+"""Two-pass LLM assessment grading using AI Service (OpenAI/Ollama)."""
 import json
 
-import httpx
-
-from core.config import settings
-
-OLLAMA_GENERATE_URL = f"{settings.OLLAMA_BASE_URL}/api/generate"
-
-
-async def _ollama_generate(prompt: str) -> str:
-    """Call Ollama generate endpoint and return the response text."""
-    payload = {
-        "model": settings.LLM_MODEL,
-        "prompt": prompt,
-        "stream": False,
-        "options": {"temperature": 0.1},  # low temp for deterministic grading
-    }
-    async with httpx.AsyncClient(timeout=60.0) as client:
-        resp = await client.post(OLLAMA_GENERATE_URL, json=payload)
-        resp.raise_for_status()
-        return resp.json().get("response", "")
+from services.ai_service import generate_text
 
 
 async def grade_free_form(
@@ -44,7 +26,7 @@ Student Answer: {student_answer}
 
 Output:"""
 
-    pass1_raw = await _ollama_generate(pass1_prompt)
+    pass1_raw = await generate_text(pass1_prompt, temperature=0.1)
 
     # Parse concepts safely
     try:
@@ -67,7 +49,7 @@ Output ONLY valid JSON in this exact format:
 
 Output:"""
 
-    pass2_raw = await _ollama_generate(pass2_prompt)
+    pass2_raw = await generate_text(pass2_prompt, temperature=0.1)
 
     # Parse grading result safely
     try:
