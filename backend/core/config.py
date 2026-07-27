@@ -27,10 +27,6 @@ class Settings(BaseSettings):
     # EMBED_MODEL: str = "nomic-embed-text"
     AI_PROVIDER:str= "openai"
 
-    OPENAI_BASE_URL: str = "https://api.openai.com/v1"
-    OPENAI_LLM_MODEL:str = "gpt-4o-mini"
-    OPENAI_EMBED_MODEL:str = "text-embedding-3-small"
-    OPENAI_EMBED_DIMENSIONS:str = "768"
 
     # App
     APP_BASE_URL: str = "http://backend:8000"
