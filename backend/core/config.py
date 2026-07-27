@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     # EMBED_MODEL: str = "nomic-embed-text"
     AI_PROVIDER:str= "openai"
 
-    OPENAI_API_KEY: str = "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"
+    OPENAI_API_KEY: str = "<your key>"
     OPENAI_BASE_URL: str = "https://api.openai.com/v1"
     OPENAI_LLM_MODEL:str = "gpt-4o-mini"
     OPENAI_EMBED_MODEL:str = "text-embedding-3-small"
