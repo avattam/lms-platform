@@ -33,6 +33,8 @@ services:
         sync: false
       - key: GOOGLE_DRIVE_TOKEN
         sync: false
+      - key: FRONTEND_URL
+        value: https://saakar-lms-frontend.netlify.app
 
 databases:
   - name: saakar-lms-db
