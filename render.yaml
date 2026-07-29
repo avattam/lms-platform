@@ -3,7 +3,7 @@ services:
     name: saakar-lms-backend
     env: docker
     dockerContext: backend
-    dockerFilePath: backend/Dockerfile
+    dockerfilePath: backend/Dockerfile
     plan: free
     healthCheckPath: /docs
     envVars:
