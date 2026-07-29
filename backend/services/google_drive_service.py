@@ -18,6 +18,16 @@ def get_drive_service():
             token_path, 
             scopes=["https://www.googleapis.com/auth/drive"]
         )
+    elif os.environ.get("GOOGLE_DRIVE_TOKEN"):
+        try:
+            import json
+            token_info = json.loads(os.environ.get("GOOGLE_DRIVE_TOKEN"))
+            creds = Credentials.from_authorized_user_info(
+                token_info,
+                scopes=["https://www.googleapis.com/auth/drive"]
+            )
+        except Exception as e:
+            print(f"Error loading Google Drive OAuth credentials from env var: {e}")
         
     # If credentials are expired, attempt to refresh them
     if creds and creds.expired and creds.refresh_token:
