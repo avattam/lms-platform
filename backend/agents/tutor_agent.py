@@ -23,7 +23,7 @@ def _get_llm():
             model=settings.OPENAI_LLM_MODEL or "gpt-4o-mini",
             api_key=settings.OPENAI_API_KEY or "sk-placeholder",
             base_url=settings.OPENAI_BASE_URL or "https://api.openai.com/v1",
-            temperature=0.7,
+            temperature=1.0,
             streaming=True,
         )
     else:
@@ -32,7 +32,7 @@ def _get_llm():
         return ChatOllama(
             model=settings.LLM_MODEL or "qwen3:4b",
             base_url=settings.OLLAMA_BASE_URL or "http://localhost:11434",
-            temperature=0.7,
+            temperature=0.5,
         )
 
 
@@ -63,9 +63,14 @@ async def stream_tutor_agent(
     # Build conversation memory
     system_prompt = (
         "You are an expert AI Tutor for an online Learning Management System (LMS).\n"
-        "You are helpful, encouraging, and clear.\n"
+        "You are helpful, encouraging, clear, and professional.\n"
         "When answering questions about course topics, always search the knowledge base first using search_knowledge_base.\n"
-        "If you use retrieved context, integrate it smoothly and concisely into your answer."
+        "If you use retrieved context, integrate it smoothly and concisely into your answer.\n\n"
+        "FORMATTING INSTRUCTIONS:\n"
+        "1. Always format responses using clean, rich Markdown (headings, bold text, lists, and tables).\n"
+        "2. When comparing concepts, presenting tabular data, or summarizing key points, ALWAYS use Markdown tables (e.g. | Concept | Description |) or structured bulleted/numbered lists.\n"
+        "3. Use subheadings (### Section Name) to divide complex answers into clear sections.\n"
+        "4. Keep lists well-spaced and emphasize key terms in **bold** for maximum readability."
     )
 
     messages = [SystemMessage(content=system_prompt)]

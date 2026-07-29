@@ -36,8 +36,12 @@ async def generate_text(prompt: str, temperature: float = 0.1) -> str:
         payload = {
             "model": settings.OPENAI_LLM_MODEL,
             "messages": [{"role": "user", "content": prompt}],
-            "temperature": temperature,
         }
+        # Only set temperature if not default (1.0) and model supports custom temperature
+        model_name = (settings.OPENAI_LLM_MODEL or "").lower()
+        if temperature != 1.0 and not any(model_name.startswith(p) for p in ("gpt-5", "o1", "o3", "o-")):
+            payload["temperature"] = temperature
+
         url = f"{settings.OPENAI_BASE_URL.rstrip('/')}/chat/completions"
 
         async with httpx.AsyncClient(timeout=60.0) as client:
@@ -81,9 +85,11 @@ async def stream_chat_response(
         payload = {
             "model": settings.OPENAI_LLM_MODEL,
             "messages": [{"role": "user", "content": prompt}],
-            "temperature": temperature,
             "stream": True,
         }
+        model_name = (settings.OPENAI_LLM_MODEL or "").lower()
+        if temperature != 1.0 and not any(model_name.startswith(p) for p in ("gpt-5", "o1", "o3", "o-")):
+            payload["temperature"] = temperature
         url = f"{settings.OPENAI_BASE_URL.rstrip('/')}/chat/completions"
 
         full_response = ""

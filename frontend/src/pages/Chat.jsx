@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api/client';
+import FormattedMessage from '../components/FormattedMessage';
 
 const SESSION_ID = `chat-${Date.now()}`;
 
@@ -156,7 +157,7 @@ export default function Chat({ user, theme, setTheme }) {
           <div key={i} className={`chat-bubble ${m.role === 'human' ? 'bubble-user' : 'bubble-ai'}`}>
             <div className="bubble-avatar">{m.role === 'human' ? '🧑' : '🤖'}</div>
             <div className="bubble-content">
-              {m.content}
+              <FormattedMessage content={m.content} />
 
               {/* Display Sources retrieved by Agent */}
               {m.sources && m.sources.length > 0 && (
