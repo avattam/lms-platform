@@ -27,6 +27,10 @@ services:
         generateValue: true
       - key: CORS_ORIGINS
         value: '["https://saakar-lms-frontend.netlify.app", "http://localhost"]'
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
 
 databases:
   - name: saakar-lms-db
