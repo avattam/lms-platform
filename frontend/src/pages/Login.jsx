@@ -1,13 +1,17 @@
+import SaakarLogo from '../components/SaakarLogo';
+
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 export default function Login() {
+  const currentYear = new Date().getFullYear();
+
   return (
     <div className="login-page">
       <div className="login-card">
         <div className="login-logo">
-          <span className="logo-icon">🎓</span>
+          <SaakarLogo height={44} className="login-saakar-logo" style={{ marginBottom: '1.25rem' }} />
           <h1>LMS Platform</h1>
-          <p>Your AI-powered learning companion</p>
+          <p>Empowering learners with AI-driven intelligence</p>
         </div>
 
         <div className="login-providers">
@@ -25,9 +29,9 @@ export default function Login() {
           </a>
         </div>
 
-        <p className="login-footer">
-          Secure sign-in via OAuth2. No password required.
-        </p>
+        <div className="login-copyright-footer">
+          © {currentYear} <strong>Saakar Academy</strong>. All rights reserved.
+        </div>
       </div>
     </div>
   );

@@ -197,7 +197,14 @@ input, textarea, select { font-family: inherit; outline: none; }
   backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border);
 }
-.nav-brand { font-weight: 700; font-size: 1.1rem; }
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--text);
+}
 .nav-links { display: flex; gap: 0.5rem; }
 .nav-link {
   padding: 0.4rem 0.9rem; border-radius: var(--radius-sm);
@@ -827,5 +834,47 @@ input, textarea, select { font-family: inherit; outline: none; }
   color: #e2e8f0;
   overflow-x: auto;
   line-height: 1.5;
+}
+
+/* ===== Saakar Branding & Footer ===== */
+.login-saakar-logo {
+  filter: drop-shadow(0 0 16px rgba(108, 99, 255, 0.45));
+  margin-bottom: 0.5rem;
+}
+
+.login-copyright-footer {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.app-footer {
+  margin-top: auto;
+  border-top: 1px solid var(--border);
+  background: var(--bg-2);
+  padding: 1.25rem 2rem;
+}
+
+.footer-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.footer-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: var(--text);
 }
 

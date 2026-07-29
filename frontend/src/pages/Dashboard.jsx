@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../api/client';
+import SaakarLogo from '../components/SaakarLogo';
+import Footer from '../components/Footer';
 
 export default function Dashboard({ user, setUser, theme, setTheme }) {
   const [courses, setCourses] = useState([]);
@@ -20,7 +22,11 @@ export default function Dashboard({ user, setUser, theme, setTheme }) {
   return (
     <div className="dashboard-layout">
       <nav className="top-nav">
-        <div className="nav-brand">🎓 LMS Platform</div>
+        <div className="nav-brand">
+          <SaakarLogo height={28} />
+          <span style={{ opacity: 0.4, margin: '0 0.5rem', fontWeight: 300 }}>|</span>
+          <span>LMS Platform</span>
+        </div>
         <div className="nav-links">
           <Link to="/chat" className="nav-link">💬 AI Tutor</Link>
           {user.role === 'admin' && (
@@ -80,6 +86,7 @@ export default function Dashboard({ user, setUser, theme, setTheme }) {
           )}
         </section>
       </main>
+      <Footer />
     </div>
   );
 }

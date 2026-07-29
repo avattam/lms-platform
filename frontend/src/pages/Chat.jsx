@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api/client';
 import FormattedMessage from '../components/FormattedMessage';
+import SaakarLogo from '../components/SaakarLogo';
 
 const SESSION_ID = `chat-${Date.now()}`;
 
@@ -134,7 +135,11 @@ export default function Chat({ user, theme, setTheme }) {
     <div className="chat-layout">
       <nav className="chat-nav">
         <Link to="/dashboard" className="btn-ghost">← Dashboard</Link>
-        <h2>AI Tutor Agent</h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <SaakarLogo height={24} />
+          <span style={{ opacity: 0.4, margin: '0 0.5rem', fontWeight: 300 }}>|</span>
+          <h2 style={{ margin: 0, fontSize: '1.1rem' }}>AI Tutor</h2>
+        </div>
         <button 
           className="btn-ghost" 
           onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
