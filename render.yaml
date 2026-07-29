@@ -35,6 +35,8 @@ services:
         sync: false
       - key: FRONTEND_URL
         value: https://saakar-lms-frontend.netlify.app
+      - key: GOOGLE_REDIRECT_URI
+        value: https://saakar-lms-frontend.netlify.app/api/auth/google/callback
 
 databases:
   - name: saakar-lms-db
