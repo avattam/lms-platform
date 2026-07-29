@@ -1,6 +1,6 @@
 [[redirects]]
   from = "/api/*"
-  to = "http://localhost:8000/:splat"
+  to = "https://saakar-lms-backend.onrender.com/:splat"
   status = 200
   force = true
 
