@@ -78,14 +78,23 @@ async def google_login():
 
 @router.get("/google/callback")
 async def google_callback(request: Request, db: Annotated[AsyncSession, Depends(get_db)]):
-    sso = _get_google_sso()
-    openid_user = await sso.verify_and_process(request)
-    user = await _upsert_user(db, "google", openid_user)
-    token = create_access_token({"sub": str(user.id)})
-    return RedirectResponse(
-        url=f"{settings.FRONTEND_URL}/auth/callback?token={token}",
-        status_code=status.HTTP_302_FOUND,
-    )
+    try:
+        sso = _get_google_sso()
+        openid_user = await sso.verify_and_process(request)
+        user = await _upsert_user(db, "google", openid_user)
+        token = create_access_token({"sub": str(user.id)})
+        return RedirectResponse(
+            url=f"{settings.FRONTEND_URL}/auth/callback?token={token}",
+            status_code=status.HTTP_302_FOUND,
+        )
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        print(f"[OAuth Callback Error]: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"OAuth login failed: {str(e)}",
+        )
 
 
 # ---- Current User ----------------------------------------------------------

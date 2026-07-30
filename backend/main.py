@@ -40,6 +40,14 @@ scheduler = AsyncIOScheduler()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Initialize DB extension & schema tables if not exist
+    try:
+        from core.database import init_db
+        await init_db()
+        print("[DB] Database extension & tables initialized successfully.")
+    except Exception as e:
+        print(f"[DB Initialization Error]: {e}")
+
     # Start nightly cleanup job
     scheduler.add_job(cleanup_orphaned_sessions, "cron", hour=2, minute=0)
     scheduler.start()
