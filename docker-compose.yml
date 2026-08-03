@@ -39,6 +39,7 @@ services:
       - JWT_SECRET=change_me_in_production
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+      - GOOGLE_DRIVE_TOKEN=${GOOGLE_DRIVE_TOKEN:-}
     depends_on:
       db:
         condition: service_healthy

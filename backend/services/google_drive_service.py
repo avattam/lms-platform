@@ -1,5 +1,6 @@
 import os
 import io
+import json
 import re
 import urllib.parse
 from google.oauth2.credentials import Credentials
@@ -8,20 +9,33 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 from core.config import settings
 
+try:
+    from core.env_utils import update_env_file
+except ImportError:
+    def update_env_file(key: str, value: str, env_path: str | None = None) -> bool:
+        os.environ[key] = value
+        return True
+
 def get_drive_service():
     """Authenticate and return Google Drive service client using OAuth 2.0 Credentials."""
     token_path = settings.GOOGLE_DRIVE_TOKEN_FILE
+    if not os.path.exists(token_path) and os.path.exists(os.path.join("backend", token_path)):
+        token_path = os.path.join("backend", token_path)
     
     creds = None
     if os.path.exists(token_path):
-        creds = Credentials.from_authorized_user_file(
-            token_path, 
-            scopes=["https://www.googleapis.com/auth/drive"]
-        )
-    elif os.environ.get("GOOGLE_DRIVE_TOKEN"):
         try:
-            import json
-            token_info = json.loads(os.environ.get("GOOGLE_DRIVE_TOKEN"))
+            creds = Credentials.from_authorized_user_file(
+                token_path, 
+                scopes=["https://www.googleapis.com/auth/drive"]
+            )
+        except Exception as e:
+            print(f"Error loading credentials from file {token_path}: {e}")
+
+    token_env = settings.GOOGLE_DRIVE_TOKEN or os.environ.get("GOOGLE_DRIVE_TOKEN")
+    if not creds and token_env:
+        try:
+            token_info = json.loads(token_env)
             creds = Credentials.from_authorized_user_info(
                 token_info,
                 scopes=["https://www.googleapis.com/auth/drive"]
@@ -29,13 +43,23 @@ def get_drive_service():
         except Exception as e:
             print(f"Error loading Google Drive OAuth credentials from env var: {e}")
         
-    # If credentials are expired, attempt to refresh them
+    # If credentials are expired, attempt to refresh them automatically
     if creds and creds.expired and creds.refresh_token:
         try:
             creds.refresh(Request())
-            # Save the refreshed credentials back to file
-            with open(token_path, "w") as token:
-                token.write(creds.to_json())
+            token_json_str = creds.to_json()
+            
+            # Save refreshed credentials back to file if possible
+            try:
+                with open(token_path, "w", encoding="utf-8") as token_file:
+                    token_file.write(token_json_str)
+            except Exception as fe:
+                print(f"Notice: Could not write refreshed token to {token_path}: {fe}")
+                
+            # Update environment variables and .env file
+            os.environ["GOOGLE_DRIVE_TOKEN"] = token_json_str
+            update_env_file("GOOGLE_DRIVE_TOKEN", token_json_str)
+            print("Successfully auto-refreshed Google Drive OAuth token and synchronized environment variables.")
         except Exception as e:
             print(f"Error refreshing Google Drive OAuth token: {e}")
             creds = None
