@@ -1,1 +1,2 @@
 Generate token and overwrite the token.json with updated token under backend folder of lms-platform if token is not valid
+use SKILL.md from ./agents/skills/lms-platform/SKILL.md and follow the steps as per this document before implementation
