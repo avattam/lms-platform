@@ -153,25 +153,25 @@ export default function Chat({ user, theme, setTheme }) {
       <div className="chat-messages">
         {messages.length === 0 && (
           <div className="chat-welcome">
-            <span className="chat-icon">🤖</span>
-            <h3>Hello! I'm your Agentic AI Learning Assistant.</h3>
-            <p>I can search course materials, check course catalogs, evaluate answers, and track your progress.</p>
+            <span className="chat-icon">🧠</span>
+            <h3>Hello! I'm your AI Cognitive Tutor.</h3>
+            <p>I can search course materials, check curriculum catalogs, evaluate assessments, and track your learning progress.</p>
           </div>
         )}
         {messages.map((m, i) => (
           <div key={i} className={`chat-bubble ${m.role === 'human' ? 'bubble-user' : 'bubble-ai'}`}>
-            <div className="bubble-avatar">{m.role === 'human' ? '🧑' : '🤖'}</div>
+            <div className="bubble-avatar">{m.role === 'human' ? '🧑‍🎓' : '🧠'}</div>
             <div className="bubble-content">
               <FormattedMessage content={m.content} />
 
               {/* Display Sources retrieved by Agent */}
               {m.sources && m.sources.length > 0 && (
                 <div className="chat-sources-box">
-                  <div className="sources-title">📚 Retrieved Sources ({m.sources.length}):</div>
+                  <div className="sources-title">📚 Retrieved References ({m.sources.length}):</div>
                   <div className="sources-list">
                     {m.sources.map((s, idx) => (
                       <div key={idx} className="source-card" title={s.snippet}>
-                        <span className="source-icon">📄</span>
+                        <span className="source-icon">📑</span>
                         <span className="source-name">{s.title}</span>
                       </div>
                     ))}

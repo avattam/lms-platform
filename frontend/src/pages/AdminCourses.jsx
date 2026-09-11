@@ -17,7 +17,7 @@ export default function AdminCourses() {
   const [editingCourseData, setEditingCourseData] = useState({ title: '', description: '', path_id: '', sequence_order: 0 });
 
   // Sub-tabs on course detail view state
-  const [detailTab, setDetailTab] = useState('videos'); // 'videos' | 'enrollments'
+  const [detailTab, setDetailTab] = useState('videos'); // 'videos' | 'documents' | 'enrollments'
 
   // Enrollments state
   const [enrollments, setEnrollments] = useState([]);
@@ -79,7 +79,7 @@ export default function AdminCourses() {
   }
 
   async function deleteCourse(id) {
-    if (!confirm('Delete this course?')) return;
+    if (!confirm('Delete this course from the curriculum?')) return;
     await api.delete(`/admin/courses/${id}`);
     setSelectedCourse(null);
     fetchData();
@@ -134,7 +134,7 @@ export default function AdminCourses() {
 
   async function removeEnrollment(userId) {
     if (!selectedCourse) return;
-    if (!confirm('Remove this user from the course?')) return;
+    if (!confirm('Remove this user from the course enrollment?')) return;
     try {
       await api.delete(`/admin/users/${userId}/enrollments/${selectedCourse.id}`);
       fetchEnrollments(selectedCourse.id);
@@ -220,7 +220,7 @@ export default function AdminCourses() {
   }
 
   async function deleteDocument(docId) {
-    if (!confirm('Are you sure you want to delete this document?')) return;
+    if (!confirm('Are you sure you want to delete this study document?')) return;
     try {
       await api.delete(`/admin/courses/documents/${docId}`);
       setDocuments(prev => prev.filter(d => d.id !== docId));
@@ -237,10 +237,10 @@ export default function AdminCourses() {
   return (
     <div className="admin-layout">
       <div className="admin-header">
-        <h1>Course Administration</h1>
+        <h1>Curriculum Administration 📚</h1>
         <div className="tab-bar">
-          <button className={`tab ${tab === 'courses' ? 'active' : ''}`} onClick={() => setTab('courses')}>📚 Courses</button>
-          <button className={`tab ${tab === 'logs' ? 'active' : ''}`} onClick={() => { setTab('logs'); loadLogs(); }}>📋 View Logs</button>
+          <button className={`tab ${tab === 'courses' ? 'active' : ''}`} onClick={() => setTab('courses')}>📚 Curriculum Catalog</button>
+          <button className={`tab ${tab === 'logs' ? 'active' : ''}`} onClick={() => { setTab('logs'); loadLogs(); }}>📜 Learning Analytics & Logs</button>
         </div>
         <Link to="/dashboard" className="btn-ghost">← Dashboard</Link>
       </div>
@@ -250,14 +250,14 @@ export default function AdminCourses() {
           {/* Course List */}
           <div className="course-manager">
             <div className="manager-header">
-              <h3>All Courses ({courses.length})</h3>
+              <h3>All Curriculum Courses ({courses.length})</h3>
             </div>
 
             <div className="create-form">
-              <h4>Add New Course</h4>
+              <h4>Add New Course to Curriculum</h4>
               <input className="form-input" placeholder="Course title" value={newCourse.title}
                 onChange={e => setNewCourse(p => ({ ...p, title: e.target.value }))} />
-              <input className="form-input" placeholder="Description (optional)" value={newCourse.description}
+              <input className="form-input" placeholder="Description (optional syllabus overview)" value={newCourse.description}
                 onChange={e => setNewCourse(p => ({ ...p, description: e.target.value }))} />
               <div style={{ display: 'flex', gap: '0.5rem' }}>
                 <select className="select-input" style={{ flex: 1 }} value={newCourse.path_id}
@@ -330,7 +330,7 @@ export default function AdminCourses() {
                       </div>
                     </div>
                     <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-                      <button className="btn-primary btn-sm" onClick={saveCourseEdit}>Save</button>
+                      <button className="btn-primary btn-sm" onClick={saveCourseEdit}>Save Changes</button>
                       <button className="btn-ghost btn-sm" onClick={() => setIsEditingCourse(false)}>Cancel</button>
                     </div>
                   </div>
@@ -341,15 +341,15 @@ export default function AdminCourses() {
                       <button className="btn-sm" onClick={startEditingCourse}>Edit Details</button>
                     </div>
                     <p style={{ margin: '0.5rem 0', fontSize: '0.875rem', color: 'var(--text-muted)' }}>
-                      {selectedCourse.description || 'No description provided.'}
+                      {selectedCourse.description || 'No syllabus overview provided.'}
                     </p>
                     <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
                       {selectedCourse.path_id && (
-                        <span className="badge" style={{ fontSize: '0.75rem', background: 'rgba(108,99,255,0.15)', color: 'var(--primary-light)' }}>
+                        <span className="badge badge-admin">
                           Path: {paths.find(p => p.id === selectedCourse.path_id)?.title || 'Unknown'}
                         </span>
                       )}
-                      <span className="badge" style={{ fontSize: '0.75rem', background: 'rgba(255,255,255,0.05)', color: 'var(--text-muted)' }}>
+                      <span className="badge">
                         Sequence: {selectedCourse.sequence_order ?? 'None'}
                       </span>
                     </div>
@@ -357,16 +357,16 @@ export default function AdminCourses() {
                 )}
               </div>
 
-              {/* Sub-tabs */}
+              {/* Sub-tabs with Learning Icons */}
               <div className="tab-bar" style={{ marginBottom: '1rem' }}>
                 <button className={`tab ${detailTab === 'videos' ? 'active' : ''}`} onClick={() => setDetailTab('videos')}>
-                  🎥 Videos ({videos.length})
+                  🎬 Lectures ({videos.length})
                 </button>
                 <button className={`tab ${detailTab === 'documents' ? 'active' : ''}`} onClick={() => setDetailTab('documents')}>
-                  📄 Documents ({documents.length})
+                  📑 Study Docs ({documents.length})
                 </button>
                 <button className={`tab ${detailTab === 'enrollments' ? 'active' : ''}`} onClick={() => setDetailTab('enrollments')}>
-                  👥 Enrollments ({enrollments.length})
+                  🧑‍🎓 Enrollments ({enrollments.length})
                 </button>
               </div>
 
@@ -374,18 +374,18 @@ export default function AdminCourses() {
               {detailTab === 'videos' && (
                 <div>
                   <div className="create-form">
-                    <h4>Add Video</h4>
-                    <input className="form-input" placeholder="Video title"
+                    <h4>Add Video Lecture</h4>
+                    <input className="form-input" placeholder="Lecture title"
                       value={newVideo.title} onChange={e => setNewVideo(p => ({ ...p, title: e.target.value }))} />
-                    <input className="form-input" placeholder="Video URL (file path or stream URL)"
+                    <input className="form-input" placeholder="Video URL (e.g. YouTube, Drive, or file stream)"
                       value={newVideo.video_url} onChange={e => setNewVideo(p => ({ ...p, video_url: e.target.value }))} />
-                    <input className="form-input" type="number" placeholder="Order"
+                    <input className="form-input" type="number" placeholder="Sequence Order"
                       value={newVideo.sequence_order} onChange={e => setNewVideo(p => ({ ...p, sequence_order: +e.target.value }))} />
-                    <button className="btn-primary" onClick={addVideo}>+ Add Video</button>
+                    <button className="btn-primary" onClick={addVideo}>+ Add Lecture</button>
                   </div>
 
                   {videos.length === 0
-                    ? <p className="empty-text">No videos yet.</p>
+                    ? <p className="empty-text">No lecture videos added yet.</p>
                     : videos.map((v, i) => (
                         <div key={v.id} className="video-row">
                           <span className="video-num">{i + 1}</span>
@@ -413,9 +413,9 @@ export default function AdminCourses() {
               {detailTab === 'documents' && (
                 <div>
                   <div className="create-form">
-                    <h4>Upload Documents</h4>
+                    <h4>Upload Study Reference Documents</h4>
                     <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
-                      Select one or more files to upload for this course.
+                      Select PDF, Word, Presentation, or Image study files for this course.
                     </p>
                     <input 
                       type="file" 
@@ -428,10 +428,10 @@ export default function AdminCourses() {
                   </div>
 
                   {documents.length === 0
-                    ? <p className="empty-text">No documents uploaded yet.</p>
+                    ? <p className="empty-text">No study reference documents uploaded yet.</p>
                     : documents.map((doc) => (
                         <div key={doc.id} className="video-row" style={{ alignItems: 'center' }}>
-                          <span style={{ fontSize: '1.25rem' }}>📄</span>
+                          <span style={{ fontSize: '1.25rem' }}>📑</span>
                           <div className="video-row-info" style={{ flex: 1, minWidth: 0 }}>
                             <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>
                               {doc.filename}
@@ -445,7 +445,7 @@ export default function AdminCourses() {
                               href={`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}${doc.file_url}`} 
                               target="_blank" 
                               rel="noreferrer" 
-                              className="btn-sm btn-success" 
+                              className="btn-sm" 
                               style={{ display: 'inline-flex', alignItems: 'center', height: '28px', textDecoration: 'none' }}
                             >
                               Download
@@ -464,7 +464,7 @@ export default function AdminCourses() {
               {detailTab === 'enrollments' && (
                 <div>
                   <div className="create-form">
-                    <h4>Enroll User</h4>
+                    <h4>Enroll Student</h4>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                       <select
                         className="select-input"
@@ -472,7 +472,7 @@ export default function AdminCourses() {
                         onChange={e => setEnrollUserId(e.target.value)}
                         style={{ flex: 1 }}
                       >
-                        <option value="">Select user...</option>
+                        <option value="">Select student to enroll...</option>
                         {allUsers
                           .filter(u => !enrollments.some(e => e.id === u.id))
                           .map(u => (
@@ -491,7 +491,7 @@ export default function AdminCourses() {
                   {enrollmentsLoading ? (
                     <p className="empty-text">Loading enrollments...</p>
                   ) : enrollments.length === 0 ? (
-                    <p className="empty-text">No active enrollments for this course.</p>
+                    <p className="empty-text">No active student enrollments for this course.</p>
                   ) : (
                     enrollments.map(user => (
                       <div key={user.id} className="enrollment-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.6rem 0.75rem', background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', marginBottom: '0.5rem' }}>
@@ -514,11 +514,11 @@ export default function AdminCourses() {
 
       {tab === 'logs' && (
         <div className="logs-panel">
-          <h3>Course View Audit Log ({logs.length} sessions)</h3>
+          <h3>Curriculum Lecture View Audit Log ({logs.length} sessions)</h3>
           <table className="data-table">
             <thead>
               <tr>
-                <th>User ID</th><th>Course ID</th><th>Video ID</th>
+                <th>Student ID</th><th>Course ID</th><th>Lecture Video ID</th>
                 <th>Session Start</th><th>Duration (s)</th>
               </tr>
             </thead>

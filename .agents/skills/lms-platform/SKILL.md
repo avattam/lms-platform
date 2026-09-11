@@ -17,7 +17,7 @@ This skill provides comprehensive instructions, architecture specs, and operatio
 The **LMS Platform** is an end-to-end Learning Management System enhanced with a Retrieval-Augmented Generation (RAG) AI assistant, interactive assessment system, video progress tracking, and Google Drive document integration.
 
 ### Core Stack
-- **Frontend**: React 19, Vite, React Router v7, Axios, Vanilla CSS design tokens (`frontend/src/index.css`).
+- **Frontend**: React 19, Vite, React Router v7, Axios, Vanilla CSS design tokens (`frontend/src/index.css`). use skills/lms-platform/design.md for UI design
 - **Backend**: FastAPI, Python 3.11+, Pydantic v2, SQLAlchemy 2.0 (asyncio), AsyncPG, APScheduler.
 - **Database & Search**: PostgreSQL with `pgvector` extension (running on port `5433` locally via Docker), `langchain-postgres`.
 - **AI & Vector Services**: LangChain, OpenAI (`gpt-4o-mini`, `text-embedding-3-small`), Ollama, LlamaParse, PyMuPDF, Unstructured PDF ingestion, YouTube transcript extractor.

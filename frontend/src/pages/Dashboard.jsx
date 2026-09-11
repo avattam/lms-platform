@@ -28,11 +28,11 @@ export default function Dashboard({ user, setUser, theme, setTheme }) {
           <span>LMS Platform</span>
         </div>
         <div className="nav-links">
-          <Link to="/chat" className="nav-link">💬 AI Tutor</Link>
+          <Link to="/chat" className="nav-link">🧠 AI Tutor</Link>
           {user.role === 'admin' && (
             <>
-              <Link to="/admin/users" className="nav-link">👥 Users</Link>
-              <Link to="/admin/courses" className="nav-link">📚 Courses</Link>
+              <Link to="/admin/users" className="nav-link">🧑‍🎓 Users</Link>
+              <Link to="/admin/courses" className="nav-link">📚 Curriculum</Link>
             </>
           )}
         </div>
@@ -53,19 +53,19 @@ export default function Dashboard({ user, setUser, theme, setTheme }) {
 
       <main className="dashboard-main">
         <header className="dashboard-hero">
-          <h1>Welcome back, {user.full_name?.split(' ')[0] || 'Learner'} 👋</h1>
-          <p>Pick up where you left off or explore your enrolled courses.</p>
+          <h1>Welcome back, {user.full_name?.split(' ')[0] || 'Learner'} 🎓</h1>
+          <p>Pick up where you left off or explore your enrolled curriculum.</p>
         </header>
 
         <section className="courses-grid-section">
-          <h2>My Courses</h2>
+          <h2>My Enrolled Courses</h2>
           {loading ? (
             <div className="loading-cards">{[...Array(3)].map((_, i) => <div key={i} className="card-skeleton" />)}</div>
           ) : courses.length === 0 ? (
             <div className="empty-state">
-              <span className="empty-icon">📭</span>
+              <span className="empty-icon">🎓</span>
               <p>You haven't been enrolled in any courses yet.</p>
-              <p>Contact your administrator to get started.</p>
+              <p>Contact your academic administrator to get started.</p>
             </div>
           ) : (
             <div className="courses-grid">

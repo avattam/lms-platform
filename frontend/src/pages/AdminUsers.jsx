@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api/client';
+import pageConfig from './config.json';
+
+const config = pageConfig.adminUsers;
 
 export default function AdminUsers() {
   const [users, setUsers] = useState([]);
@@ -14,7 +17,7 @@ export default function AdminUsers() {
   // Modal and Form states
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState('create'); // 'create' or 'edit'
-  const [formData, setFormData] = useState({ email: '', full_name: '', role: 'student', is_active: true });
+  const [formData, setFormData] = useState({ email: '', full_name: '', id_proof: '', role: 'student', is_active: true });
   const [formError, setFormError] = useState('');
 
   useEffect(() => { fetchUsers(); }, []);
@@ -57,7 +60,7 @@ export default function AdminUsers() {
   }
 
   function openCreateModal() {
-    setFormData({ email: '', full_name: '', role: 'student', is_active: true });
+    setFormData({ email: '', full_name: '', id_proof: '', role: 'student', is_active: true });
     setFormError('');
     setModalMode('create');
     setModalOpen(true);
@@ -67,6 +70,7 @@ export default function AdminUsers() {
     setFormData({
       email: selected.email,
       full_name: selected.full_name || '',
+      id_proof: selected.id_proof || '',
       role: selected.role,
       is_active: selected.is_active,
     });
@@ -113,19 +117,19 @@ export default function AdminUsers() {
   return (
     <div className="admin-layout">
       <div className="admin-header">
-        <h1>User Administration</h1>
+        <h1>{config.header.title}</h1>
         <div className="search-row">
           <input
             className="search-input"
-            placeholder="Search by name or email…"
+            placeholder={config.header.searchPlaceholder}
             value={search}
             onChange={e => setSearch(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && fetchUsers()}
           />
-          <button className="btn-primary" onClick={fetchUsers}>Search</button>
-          <button className="btn-primary" onClick={openCreateModal} style={{ background: 'linear-gradient(135deg, var(--accent), #00a887)', boxShadow: '0 2px 12px rgba(0, 212, 170, 0.3)' }}>+ Add User</button>
+          <button className="btn-primary" onClick={fetchUsers}>{config.header.searchButtonText}</button>
+          <button className="btn-primary" onClick={openCreateModal}>{config.header.addUserButtonText}</button>
         </div>
-        <Link to="/dashboard" className="btn-ghost">← Dashboard</Link>
+        <Link to={config.header.backLink.to} className="btn-ghost">{config.header.backLink.text}</Link>
       </div>
 
       <div className="admin-content">
@@ -134,30 +138,40 @@ export default function AdminUsers() {
           <table className="data-table">
             <thead>
               <tr>
-                <th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Actions</th>
+                {config.userTable.columns.map(col => (
+                  <th key={col.key}>{col.label}</th>
+                ))}
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={5} className="td-center">Loading…</td></tr>
+                <tr><td colSpan={config.userTable.columns.length} className="td-center">{config.userTable.loadingText}</td></tr>
               ) : users.map(u => (
                 <tr key={u.id} className={selected?.id === u.id ? 'row-selected' : ''} onClick={() => openUser(u)}>
-                  <td>{u.full_name || '—'}</td>
-                  <td>{u.email}</td>
-                  <td><span className={`badge badge-${u.role}`}>{u.role}</span></td>
-                  <td>
-                    <span className={`badge ${u.is_active ? 'badge-active' : 'badge-inactive'}`}>
-                      {u.is_active ? 'Active' : 'Inactive'}
-                    </span>
-                  </td>
-                  <td onClick={e => e.stopPropagation()}>
-                    <button
-                      className={`btn-sm ${u.is_active ? 'btn-danger' : 'btn-success'}`}
-                      onClick={() => toggleStatus(u)}
-                    >
-                      {u.is_active ? 'Deactivate' : 'Activate'}
-                    </button>
-                  </td>
+                  {config.userTable.columns.map(col => {
+                    if (col.key === 'name') return <td key={col.key}>{u.full_name || '—'}</td>;
+                    if (col.key === 'email') return <td key={col.key}>{u.email}</td>;
+                    if (col.key === 'id_proof') return <td key={col.key} className="td-mono">{u.id_proof || '—'}</td>;
+                    if (col.key === 'role') return <td key={col.key}><span className={`badge badge-${u.role}`}>{u.role}</span></td>;
+                    if (col.key === 'status') return (
+                      <td key={col.key}>
+                        <span className={u.is_active ? config.userTable.badges.active.className : config.userTable.badges.inactive.className}>
+                          {u.is_active ? config.userTable.badges.active.text : config.userTable.badges.inactive.text}
+                        </span>
+                      </td>
+                    );
+                    if (col.key === 'actions') return (
+                      <td key={col.key} onClick={e => e.stopPropagation()}>
+                        <button
+                          className={`btn-sm ${u.is_active ? 'btn-danger' : 'btn-success'}`}
+                          onClick={() => toggleStatus(u)}
+                        >
+                          {u.is_active ? config.userTable.actions.deactivate : config.userTable.actions.activate}
+                        </button>
+                      </td>
+                    );
+                    return <td key={col.key}>{u[col.key] || '—'}</td>;
+                  })}
                 </tr>
               ))}
             </tbody>
@@ -176,29 +190,34 @@ export default function AdminUsers() {
               <div>
                 <h3>{selected.full_name || selected.email}</h3>
                 <p>{selected.email}</p>
-                <span className={`badge ${selected.is_active ? 'badge-active' : 'badge-inactive'}`}>
-                  {selected.is_active ? 'Active' : 'Inactive'}
+                {selected.id_proof && (
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                    ID Proof: {selected.id_proof}
+                  </p>
+                )}
+                <span className={selected.is_active ? config.userTable.badges.active.className : config.userTable.badges.inactive.className}>
+                  {selected.is_active ? config.userTable.badges.active.text : config.userTable.badges.inactive.text}
                 </span>
               </div>
               <button className="btn-close" onClick={() => setSelected(null)}>✕</button>
             </div>
 
             <div className="drawer-section" style={{ borderBottom: '1px solid var(--border)', paddingBottom: '1rem', display: 'flex', flexDirection: 'row', gap: '0.5rem' }}>
-              <button className="btn-sm" onClick={openEditModal} style={{ flex: 1 }}>Edit Profile</button>
-              <button className="btn-sm btn-danger" onClick={deleteUser} style={{ flex: 1 }}>Delete User</button>
+              <button className="btn-sm" onClick={openEditModal} style={{ flex: 1 }}>{config.modal.editTitle}</button>
+              <button className="btn-sm btn-danger" onClick={deleteUser} style={{ flex: 1 }}>{config.selectedUserPanel.deleteUserButtonText}</button>
             </div>
 
             <div className="drawer-section">
               <h4>Course Enrollments</h4>
               {enrollments.length === 0
-                ? <p className="empty-text">No active enrollments.</p>
+                ? <p className="empty-text">{config.selectedUserPanel.enrollments.emptyText}</p>
                 : enrollments.map(e => {
                     const course = courses.find(c => c.id === e.course_id);
                     return (
                       <div key={e.id} className="enrollment-row">
                         <span>{course?.title || e.course_id}</span>
                         <button className="btn-sm btn-danger" onClick={() => removeEnrollment(e.course_id)}>
-                          Remove
+                          {config.selectedUserPanel.enrollments.removeButtonText}
                         </button>
                       </div>
                     );
@@ -207,19 +226,19 @@ export default function AdminUsers() {
             </div>
 
             <div className="drawer-section">
-              <h4>Enroll in a Course</h4>
+              <h4>{config.selectedUserPanel.enrollForm.title}</h4>
               <div className="enroll-row">
                 <select
                   className="select-input"
                   value={enrollCourseId}
                   onChange={e => setEnrollCourseId(e.target.value)}
                 >
-                  <option value="">Select a course…</option>
+                  <option value="">{config.selectedUserPanel.enrollForm.selectPlaceholder}</option>
                   {availableCourses.map(c => (
                     <option key={c.id} value={c.id}>{c.title}</option>
                   ))}
                 </select>
-                <button className="btn-primary" onClick={enrollUser}>Enroll</button>
+                <button className="btn-primary" onClick={enrollUser}>{config.selectedUserPanel.enrollForm.submitButtonText}</button>
               </div>
             </div>
           </div>
@@ -230,7 +249,7 @@ export default function AdminUsers() {
         <div className="modal-overlay" onClick={() => setModalOpen(false)}>
           <div className="modal-container" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>{modalMode === 'create' ? 'Create New User' : 'Edit User Profile'}</h3>
+              <h3>{modalMode === 'create' ? config.modal.createTitle : config.modal.editTitle}</h3>
               <button className="btn-close" onClick={() => setModalOpen(false)}>✕</button>
             </div>
             <form onSubmit={handleSubmit}>
@@ -238,41 +257,56 @@ export default function AdminUsers() {
                 {formError && <div style={{ color: 'var(--danger)', fontSize: '0.85rem' }}>{formError}</div>}
                 
                 <div className="form-group">
-                  <label htmlFor="user-email">Email Address</label>
+                  <label htmlFor="user-email">{config.modal.fields.email.label}</label>
                   <input
                     id="user-email"
                     type="email"
                     required
                     className="form-input"
-                    placeholder="name@example.com"
+                    placeholder={config.modal.fields.email.placeholder}
                     value={formData.email}
                     onChange={e => setFormData(prev => ({ ...prev, email: e.target.value }))}
                   />
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="user-name">Full Name</label>
+                  <label htmlFor="user-name">{config.modal.fields.full_name.label}</label>
                   <input
                     id="user-name"
                     type="text"
                     className="form-input"
-                    placeholder="John Doe"
+                    placeholder={config.modal.fields.full_name.placeholder}
                     value={formData.full_name}
                     onChange={e => setFormData(prev => ({ ...prev, full_name: e.target.value }))}
                   />
                 </div>
 
+                {config.modal.fields.id_proof && (
+                  <div className="form-group">
+                    <label htmlFor="user-id-proof">{config.modal.fields.id_proof.label}</label>
+                    <input
+                      id="user-id-proof"
+                      type="text"
+                      className="form-input"
+                      placeholder={config.modal.fields.id_proof.placeholder}
+                      value={formData.id_proof || ''}
+                      onChange={e => setFormData(prev => ({ ...prev, id_proof: e.target.value }))}
+                    />
+                  </div>
+                )}
+
                 <div className="form-row-layout">
                   <div className="form-group">
-                    <label htmlFor="user-role">Role</label>
+                    <label htmlFor="user-role">{config.modal.fields.role.label}</label>
                     <select
                       id="user-role"
                       className="select-input"
                       value={formData.role}
                       onChange={e => setFormData(prev => ({ ...prev, role: e.target.value }))}
                     >
-                      <option value="student">Student</option>
-                      <option value="admin">Admin</option>
+                      {config.modal.fields.role.options.map(opt => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
                     </select>
                   </div>
 
@@ -283,14 +317,14 @@ export default function AdminUsers() {
                         checked={formData.is_active}
                         onChange={e => setFormData(prev => ({ ...prev, is_active: e.target.checked }))}
                       />
-                      Active Account
+                      {config.modal.fields.is_active.label}
                     </label>
                   </div>
                 </div>
               </div>
               <div className="modal-footer">
-                <button type="button" className="btn-ghost" onClick={() => setModalOpen(false)}>Cancel</button>
-                <button type="submit" className="btn-primary">{modalMode === 'create' ? 'Create User' : 'Save Changes'}</button>
+                <button type="button" className="btn-ghost" onClick={() => setModalOpen(false)}>{config.modal.buttons.cancel}</button>
+                <button type="submit" className="btn-primary">{modalMode === 'create' ? config.modal.buttons.createSubmit : config.modal.buttons.editSubmit}</button>
               </div>
             </form>
           </div>
