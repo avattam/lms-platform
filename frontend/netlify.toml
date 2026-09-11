@@ -1,3 +1,7 @@
+[build]
+  publish = "dist"
+  command = "npm run build"
+
 [[redirects]]
   from = "/api/*"
   to = "https://saakar-lms-backend.onrender.com/:splat"
@@ -8,3 +12,4 @@
   from = "/*"
   to = "/index.html"
   status = 200
+
