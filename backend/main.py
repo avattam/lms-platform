@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from core.config import settings
 from core.database import engine
 from models import db_models  # noqa: F401 — ensure all models are registered
-from routers import admin_courses, admin_users, assessment, auth, chat, courses, ingest, search
+from routers import admin_categories, admin_courses, admin_users, assessment, auth, chat, courses, ingest, search
 from routers.courses import video_router
 
 
@@ -84,6 +84,8 @@ app.mount("/static/uploads", StaticFiles(directory="uploads"), name="uploads")
 app.include_router(auth.router)
 app.include_router(admin_users.router)
 app.include_router(admin_courses.router)
+app.include_router(admin_categories.router)
+app.include_router(admin_categories.public_router)
 app.include_router(courses.router)
 app.include_router(video_router)
 app.include_router(chat.router)

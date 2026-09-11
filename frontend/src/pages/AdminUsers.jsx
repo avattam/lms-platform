@@ -113,7 +113,14 @@ export default function AdminUsers() {
   return (
     <div className="admin-layout">
       <div className="admin-header">
-        <h1> User Administration 🧑‍🎓</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <h1>User Administration 🧑‍🎓</h1>
+        </div>
+        <div className="tab-bar">
+          <Link to="/admin/users" className="tab active">🧑‍🎓 Users</Link>
+          <Link to="/admin/courses" className="tab">📚 Curriculum</Link>
+          <Link to="/admin/categories" className="tab">🏷️ Categories</Link>
+        </div>
         <div className="search-row">
           <input
             className="search-input"

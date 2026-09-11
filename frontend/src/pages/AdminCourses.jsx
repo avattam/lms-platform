@@ -239,8 +239,13 @@ export default function AdminCourses() {
       <div className="admin-header">
         <h1>Curriculum Administration 📚</h1>
         <div className="tab-bar">
-          <button className={`tab ${tab === 'courses' ? 'active' : ''}`} onClick={() => setTab('courses')}>📚 Curriculum Catalog</button>
-          <button className={`tab ${tab === 'logs' ? 'active' : ''}`} onClick={() => { setTab('logs'); loadLogs(); }}>📜 Learning Analytics & Logs</button>
+          <Link to="/admin/users" className="tab">🧑‍🎓 Users</Link>
+          <Link to="/admin/courses" className="tab active">📚 Curriculum</Link>
+          <Link to="/admin/categories" className="tab">🏷️ Categories</Link>
+        </div>
+        <div className="tab-bar">
+          <button className={`tab ${tab === 'courses' ? 'active' : ''}`} onClick={() => setTab('courses')}>Catalog</button>
+          <button className={`tab ${tab === 'logs' ? 'active' : ''}`} onClick={() => { setTab('logs'); loadLogs(); }}>Analytics & Logs</button>
         </div>
         <Link to="/dashboard" className="btn-ghost">← Dashboard</Link>
       </div>

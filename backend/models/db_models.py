@@ -125,6 +125,44 @@ class Course(Base):
     progress: Mapped[list["UserProgress"]] = relationship("UserProgress", back_populates="course")
     assessments: Mapped[list["Assessment"]] = relationship("Assessment", back_populates="course")
     documents: Mapped[list["CourseDocument"]] = relationship("CourseDocument", back_populates="course", cascade="all, delete")
+    category_associations: Mapped[list["CourseCategoryAssociation"]] = relationship("CourseCategoryAssociation", back_populates="course", cascade="all, delete-orphan")
+
+
+# ---------------------------------------------------------------------------
+# Course Categories & Category Associations
+# ---------------------------------------------------------------------------
+class CourseCategory(Base):
+    __tablename__ = "course_categories"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    slug: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)
+    icon: Mapped[str | None] = mapped_column(String(50), default="🏷️")
+    color: Mapped[str | None] = mapped_column(String(50), default="#6366f1")
+    created_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    course_associations: Mapped[list["CourseCategoryAssociation"]] = relationship(
+        "CourseCategoryAssociation", back_populates="category", cascade="all, delete-orphan"
+    )
+    creator: Mapped["User"] = relationship("User", foreign_keys=[created_by])
+
+
+class CourseCategoryAssociation(Base):
+    __tablename__ = "course_category_associations"
+    __table_args__ = (UniqueConstraint("category_id", "course_id"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    category_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("course_categories.id", ondelete="CASCADE"), nullable=False)
+    course_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("courses.id", ondelete="CASCADE"), nullable=False)
+    assigned_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    assigned_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"))
+
+    category: Mapped["CourseCategory"] = relationship("CourseCategory", back_populates="course_associations")
+    course: Mapped["Course"] = relationship("Course", back_populates="category_associations")
+    assigner: Mapped["User"] = relationship("User", foreign_keys=[assigned_by])
 
 
 # ---------------------------------------------------------------------------

@@ -100,6 +100,60 @@ class LearningPathOut(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Course Categories
+# ---------------------------------------------------------------------------
+class CategoryIn(BaseModel):
+    name: str
+    description: str | None = None
+    icon: str | None = "🏷️"
+    color: str | None = "#6366f1"
+
+
+class CategoryUpdate(BaseModel):
+    name: str | None = None
+    description: str | None = None
+    icon: str | None = None
+    color: str | None = None
+
+
+class CategoryOut(BaseModel):
+    id: uuid.UUID
+    name: str
+    slug: str
+    description: str | None
+    icon: str | None
+    color: str | None
+    course_count: int = 0
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class CategoryCourseItem(BaseModel):
+    id: uuid.UUID
+    title: str
+    description: str | None = None
+    is_published: bool = False
+    assigned_at: datetime | None = None
+
+    model_config = {"from_attributes": True}
+
+
+class CategoryWithCoursesOut(CategoryOut):
+    courses: list[CategoryCourseItem] = []
+
+
+class CategoryCourseSync(BaseModel):
+    course_ids: list[uuid.UUID]
+
+
+class CategoryCourseAssignResponse(BaseModel):
+    message: str
+    assigned_count: int
+
+
+# ---------------------------------------------------------------------------
 # Courses
 # ---------------------------------------------------------------------------
 class CourseIn(BaseModel):

@@ -33,6 +33,7 @@ export default function Dashboard({ user, setUser, theme, setTheme }) {
             <>
               <Link to="/admin/users" className="nav-link">🧑‍🎓 Users</Link>
               <Link to="/admin/courses" className="nav-link">📚 Curriculum</Link>
+              <Link to="/admin/categories" className="nav-link">🏷️ Categories</Link>
             </>
           )}
         </div>

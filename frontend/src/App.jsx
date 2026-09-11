@@ -9,6 +9,7 @@ import Chat from './pages/Chat';
 import Assessment from './pages/Assessment';
 import AdminUsers from './pages/AdminUsers';
 import AdminCourses from './pages/AdminCourses';
+import AdminCategories from './pages/AdminCategories';
 import './index.css';
 
 function ProtectedRoute({ user, children, adminOnly = false }) {
@@ -71,6 +72,11 @@ export default function App() {
         <Route path="/admin/courses" element={
           <ProtectedRoute user={user} adminOnly>
             <AdminCourses />
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/categories" element={
+          <ProtectedRoute user={user} adminOnly>
+            <AdminCategories />
           </ProtectedRoute>
         } />
         <Route path="*" element={<Navigate to={user ? '/dashboard' : '/login'} replace />} />
