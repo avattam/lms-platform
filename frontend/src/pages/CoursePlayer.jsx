@@ -214,10 +214,10 @@ export default function CoursePlayer({ user, theme, setTheme }) {
         {/* Tab Selector */}
         <div className="tab-bar" style={{ marginBottom: '1.25rem' }}>
           <button className={`tab ${tab === 'videos' ? 'active' : ''}`} onClick={() => setTab('videos')} style={{ flex: 1, padding: '0.4rem 0.5rem', fontSize: '0.8rem' }}>
-            🎥 Videos
+            🎬 Lectures
           </button>
           <button className={`tab ${tab === 'documents' ? 'active' : ''}`} onClick={() => setTab('documents')} style={{ flex: 1, padding: '0.4rem 0.5rem', fontSize: '0.8rem' }}>
-            📄 Docs
+            📑 Study Docs
           </button>
         </div>
 
@@ -322,7 +322,7 @@ export default function CoursePlayer({ user, theme, setTheme }) {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 {documents.map((doc) => (
                   <div key={doc.id} className="video-row" style={{ display: 'flex', alignItems: 'center', background: 'var(--bg-3)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
-                    <span style={{ fontSize: '1.75rem', marginRight: '1rem' }}>📄</span>
+                    <span style={{ fontSize: '1.75rem', marginRight: '1rem' }}>📑</span>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <h4 style={{ color: 'var(--text)', fontSize: '0.95rem', fontWeight: '500', marginBottom: '0.2rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {doc.filename}

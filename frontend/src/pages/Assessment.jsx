@@ -43,8 +43,8 @@ export default function Assessment({ user }) {
     return (
       <div className="assessment-result">
         <div className={`result-card ${result.passed ? 'passed' : 'failed'}`}>
-          <div className="result-icon">{result.passed ? '🎉' : '📘'}</div>
-          <h2>{result.passed ? 'Well Done!' : 'Keep Studying'}</h2>
+          <div className="result-icon">{result.passed ? '🏆' : '🎯'}</div>
+          <h2>{result.passed ? 'Mastery Achieved!' : 'Keep Practicing'}</h2>
           <div className="result-score">
             <span className="score-big">{pct}%</span>
             <span>{result.total_score} / {result.max_total} points</span>
